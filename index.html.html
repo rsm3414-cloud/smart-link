@@ -1,0 +1,2915 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>スマートリンク</title>
+<!-- Supabase JS クライアント（複数CDNフォールバック） -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+// CDN読み込み失敗時のフォールバック（file://プロトコル対策）
+if (typeof window.supabase === 'undefined') {
+  document.write('<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"><\/script>');
+}
+</script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap');
+
+:root {
+  --primary: #f5a623;
+  --primary-dark: #e09510;
+  --blue: #2196F3;
+  --blue-light: #e3f2fd;
+  --red: #e53935;
+  --red-light: #ffebee;
+  --green: #43a047;
+  --green-light: #e8f5e9;
+  --orange: #fb8c00;
+  --gray: #757575;
+  --gray-light: #f5f5f5;
+  --border: #e0e0e0;
+  --text: #212121;
+  --text2: #616161;
+  --white: #fff;
+  --header-h: 52px;
+  --tab-h: 44px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Noto Sans JP', sans-serif; background: #f0f2f5; color: var(--text); font-size: 13px; }
+
+/* ===== LOGIN ===== */
+#loginScreen {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #fff8e1, #fff3e0, #fce4ec);
+}
+.loginBox {
+  background: #fff; border-radius: 12px; padding: 40px 36px; width: 360px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+}
+.loginLogo { text-align: center; margin-bottom: 28px; }
+.loginLogo .mark { font-size: 40px; margin-bottom: 4px; }
+.loginLogo h1 { font-size: 26px; font-weight: 700; color: var(--primary); letter-spacing: 2px; }
+.loginLogo p { font-size: 11px; color: var(--gray); margin-top: 2px; }
+.roleTab { display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 20px; }
+.roleTabBtn { flex: 1; padding: 9px; border: none; background: #fff; color: var(--gray); cursor: pointer; font-size: 13px; font-family: inherit; transition: all .15s; }
+.roleTabBtn.active { background: var(--primary); color: #fff; font-weight: 700; }
+.fGroup { margin-bottom: 14px; }
+.fGroup label { display: block; font-size: 11px; color: var(--gray); margin-bottom: 5px; font-weight: 500; }
+.fGroup input, .fGroup select {
+  width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 7px;
+  font-family: inherit; font-size: 13px; outline: none; color: var(--text);
+  transition: border-color .15s;
+}
+.fGroup input:focus, .fGroup select:focus { border-color: var(--primary); }
+.loginBtn {
+  width: 100%; padding: 11px; border: none; border-radius: 8px;
+  background: var(--primary); color: #fff; font-family: inherit; font-size: 14px;
+  font-weight: 700; cursor: pointer; margin-top: 6px; transition: background .15s;
+}
+.loginBtn:hover { background: var(--primary-dark); }
+.loginErr { color: var(--red); font-size: 12px; text-align: center; margin-top: 8px; min-height: 16px; }
+
+/* ===== APP ===== */
+#app { display: none; min-height: 100vh; flex-direction: column; }
+
+/* HEADER */
+.appHeader {
+  height: var(--header-h); background: #fff; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 20px; gap: 12px;
+  position: sticky; top: 0; z-index: 200;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+.appHeaderLogo { font-size: 22px; color: var(--primary); margin-right: 4px; }
+.appHeaderTitle { font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: 1px; }
+.appHeaderRight { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.headerUser { font-size: 12px; color: var(--text2); display: flex; align-items: center; gap: 6px; }
+.rolePill {
+  padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 700;
+  background: var(--primary); color: #fff;
+}
+.rolePill.store { background: var(--blue); }
+.rolePill.manager { background: var(--green); }
+.iconBtn {
+  width: 34px; height: 34px; border-radius: 50%; border: none; background: transparent;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 16px; color: var(--gray); transition: background .15s;
+}
+.iconBtn:hover { background: var(--gray-light); }
+
+/* TAB NAV */
+.tabNav {
+  background: #fff; border-bottom: 1px solid var(--border);
+  display: flex; align-items: flex-end; padding: 0 20px; gap: 0;
+  position: sticky; top: var(--header-h); z-index: 190;
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.tabNav::-webkit-scrollbar { display: none; }
+.tabNavItem {
+  padding: 12px 18px; border: none; background: transparent; font-family: inherit;
+  font-size: 13px; color: var(--text2); cursor: pointer; position: relative;
+  border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap;
+  transition: color .15s;
+}
+.tabNavItem.active { color: var(--blue); border-bottom-color: var(--blue); font-weight: 700; }
+.tabNavItem:hover:not(.active) { color: var(--text); }
+.tabNavBadge {
+  display: inline-block; background: var(--red); color: #fff; border-radius: 8px;
+  padding: 0 5px; font-size: 10px; font-weight: 700; margin-left: 4px; vertical-align: middle;
+}
+
+/* TOOLBAR */
+.toolbar {
+  background: #fff; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 8px 16px; gap: 8px; flex-wrap: wrap;
+}
+.btnPrimary {
+  display: inline-flex; align-items: center; gap: 5px; padding: 7px 14px;
+  background: var(--blue); color: #fff; border: none; border-radius: 6px;
+  font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap;
+  transition: background .15s;
+}
+.btnPrimary:hover { background: #1976d2; }
+.btnOutline {
+  display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px;
+  background: #fff; color: var(--text2); border: 1px solid var(--border); border-radius: 6px;
+  font-family: inherit; font-size: 12px; cursor: pointer; white-space: nowrap;
+  transition: all .15s;
+}
+.btnOutline:hover { border-color: var(--blue); color: var(--blue); }
+.filterSelect {
+  display: flex; align-items: center; gap: 6px; padding: 6px 10px;
+  background: #fff; border: 1px solid var(--border); border-radius: 6px; font-size: 12px;
+}
+.filterSelect select {
+  border: none; outline: none; font-family: inherit; font-size: 12px; color: var(--text); background: transparent; cursor: pointer;
+}
+.searchBox {
+  display: flex; align-items: center; gap: 6px; padding: 6px 10px;
+  border: 1px solid var(--border); border-radius: 6px; background: #fff;
+  min-width: 180px; flex: 1; max-width: 280px;
+}
+.searchBox input { border: none; outline: none; font-family: inherit; font-size: 12px; color: var(--text); background: transparent; width: 100%; }
+.toolbarRight { margin-left: auto; display: flex; gap: 6px; }
+
+/* TABLE */
+.tableWrap { overflow-x: auto; background: #fff; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+thead th {
+  background: #fafafa; border-bottom: 2px solid var(--border);
+  padding: 9px 10px; text-align: left; font-size: 11px; font-weight: 700;
+  color: var(--text2); white-space: nowrap; cursor: pointer; user-select: none;
+  position: sticky; top: 0;
+}
+thead th:hover { background: #f0f0f0; }
+thead th .sort { color: var(--border); margin-left: 2px; font-size: 10px; }
+thead th.sorted .sort { color: var(--blue); }
+tbody tr { border-bottom: 1px solid #f0f0f0; transition: background .1s; }
+tbody tr:hover { background: #f8f9ff; }
+tbody tr.pinned { background: #fffde7; }
+tbody tr.pinned:hover { background: #fff9c4; }
+td { padding: 9px 10px; vertical-align: middle; }
+
+/* PIN COL */
+.pinBtn { background: none; border: none; cursor: pointer; font-size: 15px; color: #ccc; padding: 2px; transition: color .15s; }
+.pinBtn.active { color: var(--primary); }
+
+/* PRIORITY */
+.priDot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+.priDot.urgent { background: var(--red); }
+.priDot.high { background: var(--orange); }
+.priDot.normal { background: var(--blue); }
+
+/* TAG */
+.tag {
+  display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500;
+}
+.tag-cat { background: #e8eaf6; color: #3949ab; }
+.tag-urgent { background: var(--red-light); color: var(--red); }
+.tag-high { background: #fff3e0; color: var(--orange); }
+.tag-normal { background: var(--blue-light); color: var(--blue); }
+.tag-done { background: var(--green-light); color: var(--green); }
+.tag-na { background: #f5f5f5; color: var(--gray); }
+
+/* PROGRESS */
+.progressCell { min-width: 130px; }
+.progressPct { font-weight: 700; font-size: 12px; color: var(--text); }
+.progressSub { font-size: 10px; color: var(--text2); }
+.progressBar { height: 4px; background: var(--border); border-radius: 2px; margin-top: 3px; overflow: hidden; }
+.progressFill { height: 100%; border-radius: 2px; background: var(--blue); transition: width .4s; }
+.progressFill.done { background: var(--green); }
+.progressFill.danger { background: var(--red); }
+
+/* ACTION BTNS */
+.actionBtns { display: flex; gap: 4px; white-space: nowrap; }
+.btnAction {
+  padding: 4px 10px; border-radius: 5px; border: 1px solid; font-family: inherit;
+  font-size: 11px; cursor: pointer; font-weight: 500; transition: all .15s; white-space: nowrap;
+}
+.btnAction.detail { border-color: var(--border); color: var(--text2); background: #fff; }
+.btnAction.detail:hover { border-color: var(--blue); color: var(--blue); }
+.btnAction.progress { border-color: var(--red); color: var(--red); background: #fff; font-weight: 700; }
+.btnAction.progress:hover { background: var(--red); color: #fff; }
+.btnAction.report { border-color: var(--blue); color: var(--blue); background: #fff; }
+.btnAction.report:hover { background: var(--blue); color: #fff; }
+.btnAction.done-btn { border-color: var(--green); color: var(--green); background: #fff; }
+
+/* DATE */
+.dateCell { font-size: 11px; line-height: 1.5; }
+.dateCell .overdue { color: var(--red); font-weight: 700; }
+.dateCell .soon { color: var(--orange); }
+
+/* EMPTY */
+.emptyState { text-align: center; padding: 60px 20px; color: var(--gray); }
+.emptyState .ei { font-size: 40px; margin-bottom: 10px; }
+
+/* MODAL */
+.overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 500;
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+}
+.modal {
+  background: #fff; border-radius: 12px; width: 100%; max-width: 600px;
+  max-height: 88vh; overflow-y: auto;
+  box-shadow: 0 8px 40px rgba(0,0,0,.2); animation: mIn .18s ease;
+}
+.modal.wide { max-width: 800px; }
+@keyframes mIn { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+.modalHeader {
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: #fff; z-index: 1;
+}
+.modalTitle { font-size: 15px; font-weight: 700; }
+.closeBtn {
+  width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--border);
+  background: #fff; color: var(--gray); cursor: pointer; font-size: 15px;
+  display: flex; align-items: center; justify-content: center; transition: all .15s;
+}
+.closeBtn:hover { background: var(--red-light); color: var(--red); border-color: var(--red); }
+.modalBody { padding: 20px; }
+.mRow { margin-bottom: 14px; }
+.mRow label { display: block; font-size: 11px; color: var(--gray); font-weight: 600; margin-bottom: 5px; text-transform: uppercase; letter-spacing: .5px; }
+.mRow input, .mRow textarea, .mRow select {
+  width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 7px;
+  font-family: inherit; font-size: 13px; outline: none; color: var(--text); transition: border-color .15s;
+}
+.mRow input:focus, .mRow textarea:focus, .mRow select:focus { border-color: var(--blue); }
+.mRow textarea { resize: vertical; min-height: 80px; }
+.mGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.mFooter { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
+.btnGray { padding: 8px 16px; border: 1px solid var(--border); border-radius: 7px; background: #fff; font-family: inherit; font-size: 13px; color: var(--text2); cursor: pointer; }
+.btnBlue { padding: 8px 18px; border: none; border-radius: 7px; background: var(--blue); color: #fff; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.btnGreen { padding: 8px 18px; border: none; border-radius: 7px; background: var(--green); color: #fff; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.btnRed { padding: 8px 14px; border: none; border-radius: 7px; background: var(--red); color: #fff; font-family: inherit; font-size: 13px; cursor: pointer; }
+
+/* STORE SELECTOR */
+.storeSel { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.storeSelHead { background: #f5f5f5; padding: 8px 10px; display: flex; gap: 6px; align-items: center; border-bottom: 1px solid var(--border); }
+.storeSelList { max-height: 180px; overflow-y: auto; padding: 8px; display: grid; grid-template-columns: repeat(auto-fill,minmax(120px,1fr)); gap: 2px; }
+.storeChip { display: flex; align-items: center; gap: 5px; padding: 5px 8px; border-radius: 5px; cursor: pointer; font-size: 12px; }
+.storeChip:hover { background: #f5f5f5; }
+.storeChip input { accent-color: var(--blue); cursor: pointer; }
+
+/* ATTACH */
+.attachList { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.attachItem {
+  display: flex; align-items: center; gap: 5px; padding: 5px 10px;
+  background: #f5f5f5; border: 1px solid var(--border); border-radius: 5px;
+  font-size: 11px; cursor: pointer; transition: border-color .15s;
+}
+.attachItem:hover { border-color: var(--blue); color: var(--blue); }
+
+/* PHOTO */
+.photoWrap { position: relative; display: inline-block; }
+.photoWrap img { width: 70px; height: 70px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; }
+.photoRemove { position: absolute; top: -4px; right: -4px; width: 16px; height: 16px; background: var(--red); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #fff; cursor: pointer; }
+
+/* REPORT DETAIL */
+.storeRepCard { border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 8px; }
+.storeRepCard.done { border-color: #a5d6a7; background: #f1f8e9; }
+.storeRepCard.pending { border-color: #ffcc80; background: #fff8e1; }
+.storeRepCard .sName { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+.storeRepCard .sMeta { font-size: 11px; color: var(--gray); }
+
+/* SETTINGS */
+.settTab { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+.settTabBtn { padding: 9px 16px; border: none; background: transparent; font-family: inherit; font-size: 13px; color: var(--text2); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.settTabBtn.active { color: var(--blue); border-bottom-color: var(--blue); font-weight: 700; }
+.settCard { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; margin-bottom: 12px; }
+.settCardHead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.settCardTitle { font-weight: 700; font-size: 13px; }
+
+/* TOAST */
+.toast {
+  position: fixed; bottom: 24px; right: 24px; padding: 10px 18px;
+  background: #323232; color: #fff; border-radius: 8px; font-size: 13px; z-index: 1000;
+  box-shadow: 0 4px 16px rgba(0,0,0,.3); animation: toastIn .25s ease;
+}
+.toast.success { background: var(--green); }
+.toast.error { background: var(--red); }
+@keyframes toastIn { from { opacity:0; transform:translateX(16px); } to { opacity:1; transform:translateX(0); } }
+
+/* CHIPS */
+.chip { display: flex; align-items: center; gap: 5px; padding: 5px 12px; background: #f5f5f5; border: 1px solid var(--border); border-radius: 20px; font-size: 12px; }
+.chip span { cursor: pointer; color: var(--gray); }
+.chip span:hover { color: var(--red); }
+.chipGroup { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* UTIL */
+.divider { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+.tRight { text-align: right; }
+.flex { display: flex; align-items: center; gap: 8px; }
+input[type=checkbox] { accent-color: var(--blue); }
+
+/* REPORT GRID */
+.repGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 600px) { .repGrid { grid-template-columns: 1fr; } }
+
+/* PAGE CONTENT */
+.pageContent { padding: 0; }
+
+/* SETTINGS PAGE */
+.settPage { padding: 16px; max-width: 900px; }
+
+table.mini td, table.mini th { padding: 7px 10px; }
+
+/* ===== MOBILE RESPONSIVE ===== */
+:root {
+  --bottom-nav-h: 60px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ---- LOGIN mobile ---- */
+@media (max-width: 480px) {
+  .loginBox {
+    width: 100%; border-radius: 0;
+    padding: 32px 20px;
+    min-height: 100vh;
+    box-shadow: none;
+  }
+  #loginScreen { align-items: flex-start; }
+}
+
+/* ---- HEADER mobile ---- */
+@media (max-width: 640px) {
+  .appHeader { padding: 0 12px; height: 48px; }
+  .appHeaderTitle { font-size: 14px; letter-spacing: 0; }
+  #hUser { display: none; }
+  .headerUser { gap: 4px; }
+}
+
+/* ---- TAB NAV: hide on mobile → use bottom nav ---- */
+@media (max-width: 640px) {
+  .tabNav { display: none !important; }
+  #pageArea { padding-bottom: calc(var(--bottom-nav-h) + var(--safe-bottom)); }
+}
+
+/* ---- BOTTOM NAV ---- */
+#bottomNav {
+  display: none;
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: calc(var(--bottom-nav-h) + var(--safe-bottom));
+  background: #fff;
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -2px 12px rgba(0,0,0,.08);
+  z-index: 190;
+  align-items: stretch;
+  padding-bottom: var(--safe-bottom);
+}
+@media (max-width: 640px) {
+  #bottomNav { display: flex; }
+}
+.bnItem {
+  flex: 1; border: none; background: transparent; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px; padding: 6px 2px; color: var(--gray); font-family: inherit;
+  position: relative; transition: color .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.bnItem.active { color: var(--blue); }
+.bnItem .bnIcon { font-size: 20px; line-height: 1; }
+.bnItem .bnLabel { font-size: 9px; font-weight: 500; white-space: nowrap; }
+.bnBadge {
+  position: absolute; top: 4px; right: calc(50% - 16px);
+  background: var(--red); color: #fff; border-radius: 8px;
+  padding: 0 4px; font-size: 9px; font-weight: 700; min-width: 14px; text-align: center;
+}
+
+/* ---- TOOLBAR mobile ---- */
+@media (max-width: 640px) {
+  .toolbar {
+    padding: 8px 10px; gap: 6px;
+  }
+  .toolbar .filterSelect,
+  .toolbar .searchBox,
+  .toolbar .btnOutline:not(.mobileShow) {
+    display: none;
+  }
+  .toolbar.expanded .filterSelect,
+  .toolbar.expanded .searchBox,
+  .toolbar.expanded .btnOutline { display: flex; }
+  .mobileFilterToggle {
+    display: flex !important;
+    padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px;
+    background: #fff; font-family: inherit; font-size: 12px; color: var(--text2);
+    cursor: pointer; gap: 4px; align-items: center;
+  }
+}
+@media (min-width: 641px) {
+  .mobileFilterToggle { display: none; }
+}
+
+/* ---- TABLE → CARDS on mobile ---- */
+@media (max-width: 640px) {
+  .tableWrap table,
+  .tableWrap thead,
+  .tableWrap tbody,
+  .tableWrap th,
+  .tableWrap td,
+  .tableWrap tr { display: block; }
+
+  .tableWrap thead { display: none; }
+
+  .tableWrap tbody tr {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin: 8px 10px;
+    padding: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.05);
+  }
+  .tableWrap tbody tr td {
+    padding: 3px 0;
+    border: none;
+  }
+  /* pin列・重要度列を非表示 */
+  .tableWrap tbody tr td:nth-child(1),
+  .tableWrap tbody tr td:nth-child(2) { display: none; }
+  /* カテゴリ・タイトルは縦積み */
+  .tableWrap tbody tr td:nth-child(3) { margin-bottom: 4px; }
+  .tableWrap tbody tr td:nth-child(4) { font-size: 14px; margin-bottom: 8px; }
+  /* 日時列は小さく横並び */
+  .tableWrap tbody tr td.dateCell {
+    display: inline-block;
+    font-size: 10px;
+    margin-right: 10px;
+    color: var(--text2);
+  }
+  /* 進捗セルはフル幅 */
+  .tableWrap .progressCell { margin: 6px 0; }
+  /* アクションボタンはフル幅 */
+  .tableWrap .actionBtns {
+    display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;
+  }
+  .tableWrap .btnAction {
+    flex: 1; text-align: center; padding: 8px 4px; font-size: 12px;
+  }
+}
+
+/* ---- MODAL → BOTTOM SHEET on mobile ---- */
+@media (max-width: 640px) {
+  .overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .modal {
+    border-radius: 16px 16px 0 0;
+    max-height: 92vh;
+    max-width: 100%;
+    width: 100%;
+    animation: sheetIn .25s ease;
+    padding-bottom: var(--safe-bottom);
+  }
+  .modal.wide { max-width: 100%; }
+  @keyframes sheetIn {
+    from { transform: translateY(100%); opacity: 1; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+  .mGrid { grid-template-columns: 1fr; }
+}
+
+/* ---- DASHBOARD cards mobile ---- */
+@media (max-width: 640px) {
+  .dashKpiGrid { grid-template-columns: repeat(2,1fr) !important; }
+  .dashTwoCol  { grid-template-columns: 1fr !important; }
+}
+
+/* ---- SETTINGS tabs mobile ---- */
+@media (max-width: 640px) {
+  .settTab { overflow-x: auto; }
+  .settTabBtn { font-size: 12px; padding: 8px 12px; white-space: nowrap; }
+  .settPage { padding: 10px; }
+  .settCardHead { flex-direction: column; align-items: flex-start; gap: 8px; }
+}
+
+/* ---- GENERAL padding mobile ---- */
+@media (max-width: 640px) {
+  .modalBody { padding: 14px; }
+  .mFooter { padding: 12px 14px; flex-wrap: wrap; }
+  .mFooter button { flex: 1; min-width: 80px; }
+  [style*="padding:16px"] { padding: 10px !important; }
+  [style*="max-width:1100px"] { max-width: 100% !important; }
+  [style*="max-width:760px"]  { max-width: 100% !important; }
+  [style*="max-width:900px"]  { max-width: 100% !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="loginBox">
+    <div class="loginLogo">
+      <div class="mark">✔</div>
+      <h1>スマートリンク</h1>
+      <p>STORE MANAGEMENT SYSTEM</p>
+    </div>
+    <div class="roleTab">
+      <button class="roleTabBtn active" id="rbHq" onclick="selRole('hq')">🏢 本部</button>
+      <button class="roleTabBtn" id="rbStore" onclick="selRole('store')">🏪 店舗</button>
+    </div>
+    <div class="fGroup" id="lgHqId">
+      <label>ユーザーID</label>
+      <input type="text" id="lgId" placeholder="例: admin" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="fGroup" id="lgStoreSel" style="display:none">
+      <label>店舗</label>
+      <select id="lgStore"></select>
+    </div>
+    <div class="fGroup">
+      <label>パスワード / PIN</label>
+      <input type="password" id="lgPass" placeholder="••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="loginBtn" onclick="doLogin()">ログイン</button>
+    <div class="loginErr" id="lgErr"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none; flex-direction:column; min-height:100vh;">
+
+  <!-- HEADER -->
+  <div class="appHeader">
+    <span class="appHeaderLogo">✔</span>
+    <span class="appHeaderTitle">スマートリンク</span>
+    <div class="appHeaderRight">
+      <div class="headerUser">
+        <span id="hUser"></span>
+        <span class="rolePill" id="hRolePill"></span>
+      </div>
+      <button class="iconBtn" title="ログアウト" onclick="logout()">⏻</button>
+    </div>
+  </div>
+
+  <!-- TAB NAV -->
+  <div class="tabNav" id="tabNav"></div>
+
+  <!-- PAGE -->
+  <div id="pageArea" style="flex:1; overflow:auto;"></div>
+
+  <!-- BOTTOM NAV (mobile) -->
+  <div id="bottomNav"></div>
+
+</div>
+
+<!-- OVERLAY -->
+<div id="ov" class="overlay" style="display:none" onclick="ovClick(event)"></div>
+
+<script>
+// ========== SUPABASE 設定 ==========
+// ▼ ご自身のProject URLとanon keyに書き換えてください
+const SUPABASE_URL     = 'https://tmisysqsnxmjunfuqapg.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_wTKJGCe5PRCsB7DE30xWsw_A26uPP6N';
+
+// Supabaseクライアント（CDNが読み込めない場合はnull）
+const _sb = (typeof window.supabase !== 'undefined')
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
+
+// Supabase操作ヘルパー
+const SB = {
+  async get(table) {
+    if (!_sb) return [];
+    const { data, error } = await _sb.from(table).select('*');
+    if (error) { console.error('[SB.get]', table, error); return []; }
+    return data ?? [];
+  },
+  async upsert(table, rows) {
+    if (!_sb || !rows || rows.length === 0) return;
+    const { error } = await _sb.from(table).upsert(rows, { onConflict: 'id' });
+    if (error) console.error('[SB.upsert]', table, error);
+  },
+  async upsertOne(table, row, conflictCol = 'id') {
+    if (!_sb) return;
+    const { error } = await _sb.from(table).upsert(row, { onConflict: conflictCol });
+    if (error) console.error('[SB.upsertOne]', table, error);
+  },
+  async delete(table, col, val) {
+    if (!_sb) return;
+    const { error } = await _sb.from(table).delete().eq(col, val);
+    if (error) console.error('[SB.delete]', table, error);
+  },
+  async getSetting(key) {
+    if (!_sb) return null;
+    const { data } = await _sb.from('settings').select('value').eq('key', key).single();
+    return data?.value ?? null;
+  },
+  async setSetting(key, value) {
+    if (!_sb) return;
+    await _sb.from('settings').upsert({ key, value }, { onConflict: 'key' });
+  },
+  async isEmpty(table) {
+    if (!_sb) return true;
+    const { count } = await _sb.from(table).select('*', { count: 'exact', head: true });
+    return (count ?? 0) === 0;
+  }
+};
+
+// ローカルフォールバック用キー
+const LS_KEY = 'hb2_db';
+
+// ========== DB ==========
+let DB = {
+  stores: [
+    {code:'S001',name:'札幌店',area:'北海道',pass:'1234'},
+    {code:'S002',name:'仙台店',area:'東北',pass:'1234'},
+    {code:'S003',name:'大宮店',area:'関東',pass:'1234'},
+    {code:'S004',name:'新宿店',area:'関東',pass:'1234'},
+    {code:'S005',name:'横浜店',area:'関東',pass:'1234'},
+    {code:'S006',name:'名古屋店',area:'中部',pass:'1234'},
+    {code:'S007',name:'京都店',area:'近畿',pass:'1234'},
+    {code:'S008',name:'大阪店',area:'近畿',pass:'1234'},
+    {code:'S009',name:'神戸店',area:'近畿',pass:'1234'},
+    {code:'S010',name:'広島店',area:'中国',pass:'1234'},
+    {code:'S011',name:'高松店',area:'四国',pass:'1234'},
+    {code:'S012',name:'福岡店',area:'九州',pass:'1234'},
+  ],
+  areas: ['北海道','東北','関東','中部','近畿','中国','四国','九州'],
+  categories: ['キャンペーン','商品','店舗運営','衛生・清掃','安全・防災','人事・教育','その他'],
+  users: [
+    {id:'admin',pass:'1234',role:'hq',name:'管理者'},
+    {id:'hq01',pass:'1234',role:'hq',name:'山田 太郎'},
+  ],
+  docs: [],
+  reports: [],
+  messages: [],     // 店舗→本部メッセージ
+  departments: [],  // 部署
+  hqStaff: [],      // 本部スタッフ（所属長・担当者）
+  docDrafts: [],    // 承認待ち下書き
+  templates: [],    // 文書テンプレート ★新規
+  reminders: [],    // 催促ログ ★新規
+  nextId: 1,
+  nextMsgId: 1,
+  nextDraftId: 1,
+  nextTplId: 1,     // ★新規
+  workflowEnabled: true,
+};
+let CU = null; // current user
+let curTab = 'list';
+let listFilter = {q:'',cat:'',priority:'',status:'',sort:'deadline',asc:true};
+let attachBuf = [];
+let photoBuf = [];
+let targetBuf = [];
+let targetMode = 'all';
+
+// ========== saveDB（非同期・Supabase + localStorageフォールバック）==========
+async function saveDB() {
+  // ① 常にlocalStorageにも保存（オフライン・エラー時の保険）
+  localStorage.setItem(LS_KEY, JSON.stringify(DB));
+
+  // ② Supabaseへ並列保存
+  try {
+    await Promise.all([
+      // 店舗
+      SB.upsert('stores', DB.stores.map(s => ({
+        id: s.code,          // codeをPKとして流用
+        code: s.code, name: s.name, area: s.area, pass: s.pass
+      }))),
+      // ユーザー（本部）
+      SB.upsert('hq_users', DB.users.map(u => ({
+        id: u.id, name: u.name, pass: u.pass, role: u.role
+      }))),
+      // 本部スタッフ（所属長・担当者）
+      SB.upsert('hq_staff', DB.hqStaff.map(s => ({
+        id: s.id, name: s.name, pass: s.pass || '',
+        staff_role: s.staffRole || '',
+        department: s.department || '',
+        manager_id: s.managerId || '',
+        manager_name: s.managerName || '',
+        role: s.role || 'hq'
+      }))),
+      // 部署
+      SB.upsert('departments', DB.departments.map(d => ({
+        id: d.name, name: d.name
+      }))),
+      // 業務指示文書
+      DB.docs.length > 0 ? SB.upsert('docs', DB.docs.map(d => ({
+        id: d.id, title: d.title, body: d.body, category: d.category,
+        priority: d.priority, deadline: d.deadline || null,
+        sent_by: d.sentBy, sent_at: d.sentAt,
+        targets: d.targets, attachments: d.attachments || [],
+        read_by: d.readBy || [], pinned: d.pinned || false
+      }))) : Promise.resolve(),
+      // 完了報告
+      DB.reports.length > 0 ? SB.upsert('reports', DB.reports.map((r, i) => ({
+        id: r.id || `${r.docId}_${r.storeCode}`,
+        doc_id: r.docId, store_code: r.storeCode,
+        status: r.status, comment: r.comment || '',
+        photos: r.photos || [], reported_at: r.reportedAt
+      }))) : Promise.resolve(),
+      // メッセージ
+      DB.messages.length > 0 ? SB.upsert('messages', DB.messages.map(m => ({
+        id: m.id, store_code: m.storeCode, store_name: m.storeName || '',
+        body: m.body, read_by_hq: m.readByHQ || false,
+        created_at: m.createdAt
+      }))) : Promise.resolve(),
+      // 承認下書き
+      DB.docDrafts.length > 0 ? SB.upsert('doc_drafts', DB.docDrafts.map(d => ({
+        id: d.id, title: d.title, body: d.body, category: d.category,
+        priority: d.priority, deadline: d.deadline || null,
+        targets: d.targets || [], attachments: d.attachments || [],
+        status: d.status,
+        author_id: d.authorId, author_name: d.authorName || '',
+        approver_id: d.approverId || null, approver_name: d.approverName || '',
+        reject_comment: d.rejectComment || null,
+        created_at: d.createdAt
+      }))) : Promise.resolve(),
+      // テンプレート
+      DB.templates.length > 0 ? SB.upsert('templates', DB.templates.map(t => ({
+        id: t.id, title: t.title, category: t.category,
+        priority: t.priority, body: t.body,
+        created_by: t.createdBy || '', created_at: t.createdAt
+      }))) : Promise.resolve(),
+      // 催促ログ
+      DB.reminders.length > 0 ? SB.upsert('reminders', DB.reminders.map(r => ({
+        id: r.id || `${r.docId}_${r.sentAt}`,
+        doc_id: r.docId, sent_by: r.sentBy, sent_at: r.sentAt
+      }))) : Promise.resolve(),
+      // カウンター・設定
+      SB.setSetting('next_id',        String(DB.nextId)),
+      SB.setSetting('next_msg_id',     String(DB.nextMsgId)),
+      SB.setSetting('next_draft_id',   String(DB.nextDraftId)),
+      SB.setSetting('next_tpl_id',     String(DB.nextTplId)),
+      SB.setSetting('workflow_enabled', DB.workflowEnabled),
+      SB.setSetting('areas',           DB.areas),
+      SB.setSetting('categories',      DB.categories),
+    ]);
+  } catch(e) {
+    console.error('[saveDB] Supabase保存エラー（localStorageには保存済み）:', e);
+  }
+}
+
+// ========== loadDB（非同期・Supabase優先 → localStorageフォールバック）==========
+async function loadDB() {
+  try {
+    // Supabaseに店舗データがあるか確認
+    const storesData = await SB.get('stores');
+
+    if (storesData.length > 0) {
+      // ── Supabaseからロード ──
+      const [
+        usersData, staffData, deptsData, docsData, reportsData,
+        messagesData, draftsData, templatesData, remindersData
+      ] = await Promise.all([
+        SB.get('hq_users'), SB.get('hq_staff'), SB.get('departments'),
+        SB.get('docs'), SB.get('reports'), SB.get('messages'),
+        SB.get('doc_drafts'), SB.get('templates'), SB.get('reminders'),
+      ]);
+
+      DB.stores      = storesData.map(s => ({ code: s.code, name: s.name, area: s.area || '', pass: s.pass || '1234' }));
+      DB.users       = usersData.map(u => ({ id: u.id, name: u.name, pass: u.pass, role: u.role || 'hq' }));
+      DB.hqStaff     = staffData.map(s => ({
+        id: s.id, name: s.name, pass: s.pass || '',
+        staffRole: s.staff_role || '', department: s.department || '',
+        managerId: s.manager_id || '', managerName: s.manager_name || '',
+        role: s.role || 'hq'
+      }));
+      DB.departments = deptsData.map(d => ({ name: d.name }));
+      DB.docs        = docsData.map(d => ({
+        id: d.id, title: d.title, body: d.body, category: d.category,
+        priority: d.priority, deadline: d.deadline,
+        sentBy: d.sent_by, sentAt: d.sent_at,
+        targets: d.targets || [], attachments: d.attachments || [],
+        readBy: d.read_by || [], pinned: d.pinned || false
+      }));
+      DB.reports     = reportsData.map(r => ({
+        id: r.id, docId: r.doc_id, storeCode: r.store_code,
+        status: r.status, comment: r.comment || '',
+        photos: r.photos || [], reportedAt: r.reported_at
+      }));
+      DB.messages    = messagesData.map(m => ({
+        id: m.id, storeCode: m.store_code, storeName: m.store_name || '',
+        body: m.body, readByHQ: m.read_by_hq || false, createdAt: m.created_at
+      }));
+      DB.docDrafts   = draftsData.map(d => ({
+        id: d.id, title: d.title, body: d.body, category: d.category,
+        priority: d.priority, deadline: d.deadline,
+        targets: d.targets || [], attachments: d.attachments || [],
+        status: d.status, authorId: d.author_id, authorName: d.author_name || '',
+        approverId: d.approver_id || null, approverName: d.approver_name || '',
+        rejectComment: d.reject_comment || null, createdAt: d.created_at
+      }));
+      DB.templates   = templatesData.map(t => ({
+        id: t.id, title: t.title, category: t.category, priority: t.priority,
+        body: t.body, createdBy: t.created_by || '', createdAt: t.created_at
+      }));
+      DB.reminders   = remindersData.map(r => ({
+        id: r.id, docId: r.doc_id, sentBy: r.sent_by, sentAt: r.sent_at
+      }));
+
+      // カウンター・設定
+      const [nid, nmid, ndid, ntid, wf, areas, cats] = await Promise.all([
+        SB.getSetting('next_id'), SB.getSetting('next_msg_id'),
+        SB.getSetting('next_draft_id'), SB.getSetting('next_tpl_id'),
+        SB.getSetting('workflow_enabled'), SB.getSetting('areas'),
+        SB.getSetting('categories'),
+      ]);
+      if (nid  !== null) DB.nextId       = parseInt(nid)  || 1;
+      if (nmid !== null) DB.nextMsgId    = parseInt(nmid) || 1;
+      if (ndid !== null) DB.nextDraftId  = parseInt(ndid) || 1;
+      if (ntid !== null) DB.nextTplId    = parseInt(ntid) || 1;
+      if (wf   !== null) DB.workflowEnabled = wf !== false && wf !== 'false';
+      if (Array.isArray(areas)) DB.areas = areas;
+      if (Array.isArray(cats))  DB.categories = cats;
+
+      console.log('[loadDB] Supabaseからロード完了');
+
+    } else {
+      // ── localStorageフォールバック ──
+      _loadFromLocalStorage();
+      console.log('[loadDB] Supabaseにデータなし → localStorageからロード');
+    }
+  } catch(e) {
+    console.error('[loadDB] Supabaseエラー → localStorageフォールバック:', e);
+    _loadFromLocalStorage();
+  }
+}
+
+function _loadFromLocalStorage() {
+  const r = localStorage.getItem(LS_KEY);
+  if (!r) return;
+  try {
+    const d = JSON.parse(r);
+    ['docs','reports','messages','departments','hqStaff','docDrafts','templates',
+     'reminders','stores','areas','categories','users',
+     'nextId','nextMsgId','nextDraftId','nextTplId','workflowEnabled'
+    ].forEach(k => { if (d[k] !== undefined) DB[k] = d[k]; });
+  } catch(e) { console.error('[_loadFromLocalStorage]', e); }
+}
+
+// ========== LOGIN ==========
+let loginRole = 'hq';
+function selRole(r) {
+  loginRole = r;
+  document.getElementById('rbHq').classList.toggle('active', r==='hq');
+  document.getElementById('rbStore').classList.toggle('active', r==='store');
+  document.getElementById('lgHqId').style.display = r==='hq' ? '' : 'none';
+  document.getElementById('lgStoreSel').style.display = r==='store' ? '' : 'none';
+}
+function initLoginStores() {
+  const s = document.getElementById('lgStore');
+  s.innerHTML = DB.stores.map(st => `<option value="${st.code}">${st.name}</option>`).join('');
+}
+function doLogin() {
+  const pass = document.getElementById('lgPass').value;
+  document.getElementById('lgErr').textContent = '';
+  if (loginRole === 'hq') {
+    const id = document.getElementById('lgId').value.trim();
+    // 通常ユーザーチェック
+    const u = DB.users.find(u => u.id===id && u.pass===pass && u.role==='hq');
+    if (u) { CU = {...u}; }
+    else {
+      // hqStaffチェック
+      const s = DB.hqStaff.find(s => s.id===id && s.pass===pass);
+      if (!s) { document.getElementById('lgErr').textContent = 'IDまたはパスワードが違います'; return; }
+      CU = {...s, role:'hq'};
+    }
+  } else {
+    const code = document.getElementById('lgStore').value;
+    const st = DB.stores.find(s => s.code===code);
+    if (!st) return;
+    if ((st.pass||'1234') !== pass) { document.getElementById('lgErr').textContent = 'PINが違います'; return; }
+    CU = {role:'store', storeCode:code, name:st.name, id:code};
+  }
+  document.getElementById('loginScreen').style.display = 'none';
+  const app = document.getElementById('app');
+  app.style.display = 'flex';
+  document.getElementById('hUser').textContent = CU.name;
+  const pill = document.getElementById('hRolePill');
+  const roleLabel = CU.staffRole==='manager' ? '所属長' : CU.staffRole==='staff' ? '担当者' : (CU.role==='hq' ? '本部' : '店舗');
+  pill.textContent = roleLabel;
+  pill.className = 'rolePill' + (CU.role==='store' ? ' store' : CU.staffRole==='manager' ? ' manager' : '');
+  renderTabs();
+  goTab(CU.role === 'hq' ? 'dashboard' : 'list');
+}
+function logout() {
+  CU = null;
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('lgPass').value = '';
+  document.getElementById('lgId').value = '';
+  document.getElementById('lgErr').textContent = '';
+}
+
+// ========== TABS ==========
+function renderTabs() {
+  const isHQ = CU.role === 'hq';
+  const isManager = CU.staffRole === 'manager';
+  const unreadMsgHQ = DB.messages.filter(m => !m.readByHQ).length;
+  // 承認待ち件数（所属長向け）
+  const pendingApproval = DB.docDrafts.filter(d => d.status==='pending' && d.approverId===CU.id).length;
+  // 自分の下書き（差戻し含む）
+  const myDrafts = DB.docDrafts.filter(d => d.authorId===CU.id && (d.status==='draft'||d.status==='rejected')).length;
+
+  const tabs = isHQ
+    ? [
+        {id:'dashboard', label:'ダッシュボード'},
+        {id:'list',      label:'業務指示'},
+        {id:'report',    label:'完了報告確認', badge:pendingDocCount()||null},
+        {id:'msgbox',    label:'店舗メッセージ', badge:unreadMsgHQ||null},
+        ...(isManager ? [{id:'approval', label:'承認待ち', badge:pendingApproval||null}] : []),
+        ...(!isManager && DB.workflowEnabled ? [{id:'drafts', label:'下書き・差戻し', badge:myDrafts||null}] : []),
+        {id:'templates', label:'テンプレート'},
+        {id:'settings',  label:'設定'},
+      ]
+    : [
+        {id:'list',     label:'受信文書', badge:unreadCount()||null},
+        {id:'reported', label:'報告済み'},
+        {id:'msgstore', label:'メッセージ送信'},
+      ];
+  document.getElementById('tabNav').innerHTML = tabs.map(t =>
+    `<button class="tabNavItem ${curTab===t.id?'active':''}" onclick="goTab('${t.id}')">${t.label}${t.badge?`<span class="tabNavBadge">${t.badge}</span>`:''}</button>`
+  ).join('');
+
+  // ボトムナビ（スマホ用）アイコンマップ
+  const iconMap = {
+    dashboard:'📊', list:'📋', report:'📝', msgbox:'💬',
+    approval:'✅', drafts:'📄', templates:'📌', settings:'⚙️',
+    reported:'✅', msgstore:'📨',
+  };
+  const labelMap = {
+    dashboard:'ダッシュボード', list:'業務指示', report:'報告確認', msgbox:'メッセージ',
+    approval:'承認', drafts:'下書き', templates:'テンプレート', settings:'設定',
+    reported:'報告済み', msgstore:'メッセージ',
+  };
+  // スマホ用は最大5タブに絞る（優先度順）
+  const mobileTabs = tabs.slice(0, 5);
+  document.getElementById('bottomNav').innerHTML = mobileTabs.map(t =>
+    `<button class="bnItem ${curTab===t.id?'active':''}" onclick="goTab('${t.id}')">
+      <span class="bnIcon">${iconMap[t.id]||'📄'}</span>
+      <span class="bnLabel">${labelMap[t.id]||t.label}</span>
+      ${t.badge?`<span class="bnBadge">${t.badge}</span>`:''}
+    </button>`
+  ).join('');
+}
+function goTab(id) {
+  curTab = id;
+  renderTabs();
+  const el = document.getElementById('pageArea');
+  if (id==='dashboard') renderDashboard(el);
+  else if (id==='list') renderListPage(el);
+  else if (id==='report') renderReportPage(el);
+  else if (id==='reported') renderReportedPage(el);
+  else if (id==='settings') renderSettingsPage(el);
+  else if (id==='msgbox') renderMsgBoxPage(el);
+  else if (id==='msgstore') renderMsgStorePage(el);
+  else if (id==='approval') renderApprovalPage(el);
+  else if (id==='drafts') renderDraftsPage(el);
+  else if (id==='templates') renderTemplatesPage(el);
+}
+
+// ========== ① DASHBOARD ==========
+function renderDashboard(el) {
+  const total = DB.docs.length;
+  const now = new Date();
+
+  // 全体集計
+  const doneCount  = DB.docs.filter(d => complRate(d) === 100).length;
+  const overdueCount = DB.docs.filter(d => d.deadline && new Date(d.deadline) < now && complRate(d) < 100).length;
+  const pendingCount = total - doneCount - overdueCount;
+
+  // 期限超過文書一覧（最新5件）
+  const overdueDocs = DB.docs
+    .filter(d => d.deadline && new Date(d.deadline) < now && complRate(d) < 100)
+    .sort((a,b) => a.deadline.localeCompare(b.deadline))
+    .slice(0, 5);
+
+  // 未対応店舗が多い文書トップ5
+  const worstDocs = DB.docs
+    .filter(d => complRate(d) < 100)
+    .map(d => ({
+      ...d,
+      pendN: d.targets.filter(s => !DB.reports.some(r=>r.docId===d.id&&r.storeCode===s)).length
+    }))
+    .sort((a,b) => b.pendN - a.pendN)
+    .slice(0, 5);
+
+  // エリア別完了率
+  const areaStats = DB.areas.map(area => {
+    const storeCodes = DB.stores.filter(s=>s.area===area).map(s=>s.code);
+    if (!storeCodes.length) return null;
+    let doneTotal=0, total2=0;
+    DB.docs.forEach(doc => {
+      const targets = doc.targets.filter(s=>storeCodes.includes(s));
+      total2 += targets.length;
+      doneTotal += targets.filter(s=>DB.reports.some(r=>r.docId===doc.id&&r.storeCode===s&&r.status==='done')).length;
+    });
+    return { area, rate: total2>0 ? Math.round(doneTotal/total2*100) : 0, total:total2 };
+  }).filter(Boolean);
+
+  // 最近7日間の完了報告数（日別）
+  const dayLabels = [], dayCounts = [];
+  for(let i=6;i>=0;i--) {
+    const d = new Date(now); d.setDate(d.getDate()-i);
+    const label = `${d.getMonth()+1}/${d.getDate()}`;
+    dayLabels.push(label);
+    const dateStr = d.toISOString().slice(0,10);
+    dayCounts.push(DB.reports.filter(r=>r.reportedAt?.slice(0,10)===dateStr).length);
+  }
+
+  el.innerHTML = `
+  <div style="padding:16px;max-width:1100px">
+
+    <!-- KPI カード -->
+    <div class="dashKpiGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+      ${[
+        {label:'総文書数', val:total, color:'var(--blue)', icon:'📋'},
+        {label:'完了', val:doneCount, color:'var(--green)', icon:'✅'},
+        {label:'対応中', val:pendingCount, color:'var(--orange)', icon:'⏳'},
+        {label:'期限超過', val:overdueCount, color:'var(--red)', icon:'🚨'},
+      ].map(c=>`
+        <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px 20px;display:flex;align-items:center;gap:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+          <span style="font-size:28px">${c.icon}</span>
+          <div>
+            <div style="font-size:28px;font-weight:700;color:${c.color};line-height:1">${c.val}</div>
+            <div style="font-size:11px;color:var(--gray);margin-top:3px">${c.label}</div>
+          </div>
+        </div>`).join('')}
+    </div>
+
+    <div class="dashTwoCol" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+
+      <!-- 期限超過文書 -->
+      <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <span style="font-weight:700;font-size:13px">🚨 期限超過文書</span>
+          <button class="btnOutline" style="font-size:11px;padding:3px 10px" onclick="listFilter.status='overdue';goTab('list')">一覧へ</button>
+        </div>
+        ${!overdueDocs.length
+          ? `<div style="text-align:center;padding:20px;color:var(--gray);font-size:13px">✅ 期限超過なし</div>`
+          : overdueDocs.map(d=>{
+              const pendN = d.targets.filter(s=>!DB.reports.some(r=>r.docId===d.id&&r.storeCode===s)).length;
+              const daysOver = Math.floor((now - new Date(d.deadline)) / 86400000);
+              return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f5f5f5;cursor:pointer" onclick="openDocDetail('${d.id}')">
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.title}</div>
+                  <div style="font-size:11px;color:var(--red)">期限: ${d.deadline}（${daysOver}日超過）</div>
+                </div>
+                <div style="text-align:right;flex-shrink:0">
+                  <div style="font-size:13px;font-weight:700;color:var(--red)">${pendN}店舗</div>
+                  <div style="font-size:10px;color:var(--gray)">未対応</div>
+                </div>
+                <button class="btnAction progress" style="font-size:11px;padding:3px 8px;flex-shrink:0" onclick="event.stopPropagation();openReminderModal('${d.id}')">催促</button>
+              </div>`;
+            }).join('')}
+      </div>
+
+      <!-- 未対応店舗が多い文書 -->
+      <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <span style="font-weight:700;font-size:13px">⏳ 未対応店舗が多い文書</span>
+        </div>
+        ${!worstDocs.length
+          ? `<div style="text-align:center;padding:20px;color:var(--gray);font-size:13px">✅ 未対応文書なし</div>`
+          : worstDocs.map(d=>{
+              const rate = complRate(d);
+              return `<div style="padding:8px 0;border-bottom:1px solid #f5f5f5;cursor:pointer" onclick="openDocDetail('${d.id}')">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+                  <span style="font-size:13px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.title}</span>
+                  <span style="font-size:12px;font-weight:700;color:var(--blue)">${rate}%</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden">
+                    <div style="height:100%;width:${rate}%;background:${rate>70?'var(--green)':rate>40?'var(--orange)':'var(--red)'};border-radius:3px"></div>
+                  </div>
+                  <span style="font-size:11px;color:var(--gray);flex-shrink:0">未対応 ${d.pendN}店舗</span>
+                  <button class="btnAction progress" style="font-size:11px;padding:3px 8px;flex-shrink:0" onclick="event.stopPropagation();openReminderModal('${d.id}')">催促</button>
+                </div>
+              </div>`;
+            }).join('')}
+      </div>
+    </div>
+
+    <div class="dashTwoCol" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+
+      <!-- エリア別完了率 -->
+      <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:14px">🗾 エリア別完了率</div>
+        ${!DB.docs.length
+          ? `<div style="text-align:center;padding:20px;color:var(--gray);font-size:13px">文書がありません</div>`
+          : areaStats.map(a=>`
+            <div style="margin-bottom:10px">
+              <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+                <span style="font-size:12px">${a.area}</span>
+                <span style="font-size:12px;font-weight:700;color:${a.rate>=80?'var(--green)':a.rate>=50?'var(--orange)':'var(--red)'}">${a.rate}%</span>
+              </div>
+              <div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden">
+                <div style="height:100%;width:${a.rate}%;background:${a.rate>=80?'var(--green)':a.rate>=50?'var(--orange)':'var(--red)'};border-radius:4px;transition:width .5s"></div>
+              </div>
+            </div>`).join('')}
+      </div>
+
+      <!-- 直近7日間の完了報告数 -->
+      <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:14px">📈 直近7日間の完了報告数</div>
+        ${dayCounts.every(v=>v===0)
+          ? `<div style="text-align:center;padding:20px;color:var(--gray);font-size:13px">報告データがありません</div>`
+          : `<div style="display:flex;align-items:flex-end;gap:6px;height:100px;padding-bottom:4px">
+              ${dayCounts.map((v,i)=>{
+                const max = Math.max(...dayCounts,1);
+                const h = Math.round(v/max*88);
+                return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+                  <span style="font-size:10px;color:var(--gray)">${v||''}</span>
+                  <div style="width:100%;height:${h}px;background:var(--blue);border-radius:3px 3px 0 0;min-height:${v?4:0}px;transition:height .4s"></div>
+                  <span style="font-size:10px;color:var(--gray);white-space:nowrap">${dayLabels[i]}</span>
+                </div>`;
+              }).join('')}
+            </div>`}
+      </div>
+    </div>
+
+    <!-- 催促ログ -->
+    ${DB.reminders.length ? `
+    <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px;margin-top:14px">
+      <div style="font-weight:700;font-size:13px;margin-bottom:12px">📢 催促履歴（直近5件）</div>
+      ${DB.reminders.slice(-5).reverse().map(r=>`
+        <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f5f5f5;font-size:12px">
+          <span style="color:var(--orange)">📢</span>
+          <span style="flex:1">${r.docTitle}</span>
+          <span style="color:var(--gray)">${r.targetCount}店舗へ催促</span>
+          <span style="color:var(--gray)">${fmt(r.sentAt)}</span>
+        </div>`).join('')}
+    </div>` : ''}
+  </div>`;
+}
+
+// ========== ② REMINDER MODAL (期限超過催促) ==========
+function openReminderModal(docId) {
+  const doc = DB.docs.find(d=>d.id===docId);
+  if (!doc) return;
+  const pendStores = doc.targets.filter(s => !DB.reports.some(r=>r.docId===doc.id&&r.storeCode===s));
+  const overdueStores = doc.targets.filter(s => {
+    const isOD = doc.deadline && new Date(doc.deadline) < new Date();
+    return isOD && !DB.reports.some(r=>r.docId===doc.id&&r.storeCode===s);
+  });
+  const targets = overdueStores.length ? overdueStores : pendStores;
+
+  showModal(`<div class="modal wide">
+    <div class="modalHeader">
+      <span class="modalTitle">📢 催促送信 — ${doc.title}</span>
+      <button class="closeBtn" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modalBody">
+      <div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#795548">
+        <b>対象店舗 ${targets.length}店舗</b>に催促メッセージを送信します。
+        店舗側の「受信文書」に催促フラグ付きで通知されます。
+      </div>
+      <div class="mRow">
+        <label>催促メッセージ *</label>
+        <textarea id="reminderMsg" rows="4" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:13px;resize:vertical"
+          placeholder="例：期限が過ぎています。至急ご対応・完了報告をお願いします。"
+>期限が超過しています。至急ご対応いただき、完了報告を送信してください。</textarea>
+      </div>
+      <div style="background:#f9f9f9;border-radius:8px;padding:10px 12px;max-height:160px;overflow-y:auto">
+        <p style="font-size:11px;color:var(--gray);font-weight:600;margin-bottom:6px">催促対象店舗</p>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">
+          ${targets.map(s=>`<span style="font-size:11px;padding:2px 8px;background:#fff;border:1px solid var(--border);border-radius:4px">${storeName(s)}</span>`).join('')}
+        </div>
+      </div>
+    </div>
+    <div class="mFooter">
+      <button class="btnGray" onclick="closeModal()">キャンセル</button>
+      <button class="btnPrimary" style="background:var(--orange);border:none" onclick="sendReminder('${docId}')">📢 催促を送信する</button>
+    </div>
+  </div>`);
+}
+async function sendReminder(docId) {
+  const msg = document.getElementById('reminderMsg').value.trim();
+  if (!msg) { toast('メッセージを入力してください','error'); return; }
+  const doc = DB.docs.find(d=>d.id===docId);
+  const targets = doc.targets.filter(s => !DB.reports.some(r=>r.docId===doc.id&&r.storeCode===s));
+  // 催促フラグをdocに付与（店舗側で表示）
+  if (!doc.reminders) doc.reminders = [];
+  doc.reminders.push({ msg, targets:[...targets], sentAt: new Date().toISOString(), sentBy: CU.name });
+  // 催促ログ
+  DB.reminders.push({ docId, docTitle: doc.title, msg, targetCount: targets.length, sentAt: new Date().toISOString(), sentBy: CU.name });
+  await saveDB(); closeModal();
+  toast(`${targets.length}店舗に催促を送信しました`,'success');
+  renderDashboard(document.getElementById('pageArea'));
+}
+
+// ========== ③ TEMPLATES PAGE ==========
+function renderTemplatesPage(el) {
+  const catOpts = DB.categories.map(c=>`<option value="${c}">${c}</option>`).join('');
+  el.innerHTML = `
+  <div class="pageContent">
+    <div class="toolbar">
+      <button class="btnPrimary" onclick="openNewTemplate()">✏ テンプレート登録</button>
+      <div class="searchBox">
+        <span style="color:var(--gray)">🔍</span>
+        <input type="text" placeholder="テンプレートを検索" id="tplSearch" oninput="renderTplList()">
+      </div>
+      <div class="filterSelect">
+        <select id="tplCatF" onchange="renderTplList()">
+          <option value="">全カテゴリ</option>${catOpts}
+        </select>
+      </div>
+    </div>
+    <div style="padding:16px" id="tplList"></div>
+  </div>`;
+  renderTplList();
+}
+function renderTplList() {
+  const q = document.getElementById('tplSearch')?.value||'';
+  const cat = document.getElementById('tplCatF')?.value||'';
+  const tpls = DB.templates.filter(t=>(!q||t.title.includes(q)||t.body.includes(q))&&(!cat||t.category===cat));
+  const el = document.getElementById('tplList');
+  if (!el) return;
+  if (!tpls.length) {
+    el.innerHTML = `<div class="emptyState"><div class="ei">📄</div><p>テンプレートがありません<br><span style="font-size:12px">よく使う文書を登録しておくと、次回から素早く作成できます</span></p></div>`;
+    return;
+  }
+  el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px">
+    ${tpls.map(t=>`
+      <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;transition:box-shadow .15s" onmouseover="this.style.boxShadow='0 3px 12px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''">
+        <div style="display:flex;align-items:flex-start;gap:6px;flex-wrap:wrap">
+          <span class="tag tag-cat">${t.category}</span>${priTag(t.priority)}
+          <span style="margin-left:auto;font-size:10px;color:var(--gray)">${fmt(t.createdAt)}</span>
+        </div>
+        <div style="font-weight:700;font-size:14px">${t.title}</div>
+        <div style="font-size:12px;color:var(--text2);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.6">${t.body}</div>
+        <div style="display:flex;gap:6px;margin-top:4px">
+          <button class="btnPrimary" style="font-size:12px;flex:1" onclick="useTemplate('${t.id}')">📤 この内容で作成</button>
+          <button class="btnOutline" style="font-size:12px" onclick="editTemplate('${t.id}')">編集</button>
+          <button class="btnOutline" style="font-size:12px;color:var(--red);border-color:var(--red)" onclick="deleteTemplate('${t.id}')">削除</button>
+        </div>
+      </div>`).join('')}
+  </div>`;
+}
+function openNewTemplate(prefill) {
+  const catOpts = DB.categories.map(c=>`<option value="${c}" ${prefill?.category===c?'selected':''}>${c}</option>`).join('');
+  const p = prefill || {};
+  showModal(`<div class="modal wide">
+    <div class="modalHeader">
+      <span class="modalTitle">📄 テンプレート登録</span>
+      <button class="closeBtn" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modalBody">
+      <div class="mRow"><label>テンプレート名 *</label>
+        <input type="text" id="tplTitle" placeholder="例：月次衛生点検依頼" value="${p.title||''}">
+      </div>
+      <div class="mGrid">
+        <div class="mRow"><label>カテゴリ</label><select id="tplCat">${catOpts}</select></div>
+        <div class="mRow"><label>重要度</label>
+          <select id="tplPri">
+            <option value="normal" ${p.priority==='normal'?'selected':''}>通常</option>
+            <option value="high" ${p.priority==='high'?'selected':''}>重要</option>
+            <option value="urgent" ${p.priority==='urgent'?'selected':''}>緊急</option>
+          </select>
+        </div>
+      </div>
+      <div class="mRow"><label>連絡文 *</label>
+        <textarea id="tplBody" rows="7" placeholder="テンプレートとして保存する連絡文を入力…" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:13px;resize:vertical">${p.body||''}</textarea>
+      </div>
+      <div class="mRow"><label>デフォルト期限（日数）</label>
+        <input type="number" id="tplDays" min="0" max="365" placeholder="例: 7（送信日から7日後を期限にセット）" value="${p.defaultDays||''}" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:13px">
+        <p style="font-size:11px;color:var(--gray);margin-top:4px">空欄の場合は期限を自動設定しません</p>
+      </div>
+    </div>
+    <div class="mFooter">
+      <button class="btnGray" onclick="closeModal()">キャンセル</button>
+      <button class="btnBlue" onclick="saveTemplate(${p.id?`'${p.id}'`:'null'})">💾 保存する</button>
+    </div>
+  </div>`);
+}
+async function saveTemplate(id) {
+  const title = document.getElementById('tplTitle').value.trim();
+  const body = document.getElementById('tplBody').value.trim();
+  if (!title) { toast('テンプレート名を入力してください','error'); return; }
+  if (!body) { toast('連絡文を入力してください','error'); return; }
+  const data = {
+    title, body,
+    category: document.getElementById('tplCat').value,
+    priority: document.getElementById('tplPri').value,
+    defaultDays: parseInt(document.getElementById('tplDays').value)||null,
+  };
+  if (id) {
+    const t = DB.templates.find(x=>x.id===id);
+    Object.assign(t, data);
+    toast('テンプレートを更新しました','success');
+  } else {
+    DB.templates.push({ id:'T'+String(DB.nextTplId++).padStart(4,'0'), ...data, createdAt: new Date().toISOString() });
+    toast('テンプレートを登録しました','success');
+  }
+  await saveDB(); closeModal(); renderTplList();
+}
+function editTemplate(id) {
+  const t = DB.templates.find(x=>x.id===id);
+  openNewTemplate(t);
+}
+async function deleteTemplate(id) {
+  if (!confirm('このテンプレートを削除しますか？')) return;
+  DB.templates = DB.templates.filter(t=>t.id!==id);
+  await saveDB(); renderTplList(); toast('削除しました');
+}
+function saveDocAsTemplate(docId) {
+  const doc = DB.docs.find(d=>d.id===docId);
+  if (!doc) return;
+  closeModal();
+  openNewTemplate({ title: doc.title, body: doc.body, category: doc.category, priority: doc.priority });
+}
+function useTemplate(id) {
+  const t = DB.templates.find(x=>x.id===id);
+  if (!t) return;
+  closeModal();
+  // テンプレート内容をbufferに入れてopenNewDocを呼ぶ
+  _tplPrefill = t;
+  openNewDocWithTemplate(t);
+}
+let _tplPrefill = null;
+function openNewDocWithTemplate(t) {
+  attachBuf = []; targetBuf = []; targetMode = 'all';
+  const catOpts = DB.categories.map(c=>`<option value="${c}" ${t.category===c?'selected':''}>${c}</option>`).join('');
+  const managers = DB.hqStaff.filter(s=>s.staffRole==='manager');
+  const managerOpts = managers.map(m=>`<option value="${m.id}">${m.name}（${m.department||''}）</option>`).join('');
+  const wfEnabled = DB.workflowEnabled && managers.length > 0;
+  const isAdmin = !CU.staffRole;
+  // デフォルト期限計算
+  let defaultDl = '';
+  if (t.defaultDays) {
+    const d = new Date(); d.setDate(d.getDate()+t.defaultDays);
+    defaultDl = d.toISOString().slice(0,10);
+  }
+  showModal(`
+    <div class="modal wide">
+      <div class="modalHeader">
+        <span class="modalTitle">✏ 新規業務指示（テンプレートから）</span>
+        <button class="closeBtn" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modalBody">
+        <div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:8px;padding:8px 14px;margin-bottom:14px;font-size:12px;color:#2e7d32">
+          📄 テンプレート「<b>${t.title}</b>」から作成しています。内容を確認・編集してから送信してください。
+        </div>
+        ${wfEnabled && !isAdmin ? `
+        <div style="background:#e3f2fd;border:1px solid #90caf9;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <span style="color:#1565c0;font-weight:700">⚙ 承認ワークフロー</span>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--text)">
+              <input type="checkbox" id="wfUse" checked style="accent-color:var(--blue)" onchange="document.getElementById('wfPanel').style.display=this.checked?'':'none'"> 所属長の承認を経て送信する
+            </label>
+          </div>
+          <div id="wfPanel">
+            <label style="font-size:11px;color:var(--gray);font-weight:600;display:block;margin-bottom:4px">承認者（所属長） *</label>
+            <select id="wfApproverId" style="width:100%;padding:7px 10px;border:1px solid #90caf9;border-radius:6px;font-family:inherit;font-size:13px;background:#fff">
+              <option value="">所属長を選択してください</option>${managerOpts}
+            </select>
+          </div>
+        </div>` : ''}
+        <div class="mRow"><label>タイトル *</label><input type="text" id="nTitle" value="${t.title}"></div>
+        <div class="mGrid">
+          <div class="mRow"><label>カテゴリ</label><select id="nCat">${catOpts}</select></div>
+          <div class="mRow"><label>重要度</label>
+            <select id="nPri">
+              <option value="normal" ${t.priority==='normal'?'selected':''}>通常</option>
+              <option value="high" ${t.priority==='high'?'selected':''}>重要</option>
+              <option value="urgent" ${t.priority==='urgent'?'selected':''}>緊急</option>
+            </select>
+          </div>
+        </div>
+        <div class="mRow"><label>連絡文 *</label><textarea id="nBody" rows="5" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:13px;resize:vertical">${t.body}</textarea></div>
+        <div class="mGrid">
+          <div class="mRow"><label>完了期限</label><input type="date" id="nDl" value="${defaultDl}"></div>
+          <div class="mRow" style="display:flex;flex-direction:column;justify-content:flex-end">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;text-transform:none;letter-spacing:0">
+              <input type="checkbox" id="nNoDl" onchange="document.getElementById('nDl').disabled=this.checked"> 期限なし
+            </label>
+          </div>
+        </div>
+        <div class="mRow">
+          <label>添付資料</label>
+          <input type="file" multiple accept=".pdf,.xlsx,.docx,.csv,.png,.jpg,.jpeg" onchange="addAttach(this)">
+          <div id="attachPv" class="attachList"></div>
+        </div>
+        <div class="mRow">
+          <label>送信先</label>
+          <div style="display:flex;gap:6px;margin-bottom:8px">
+            <button class="btnGray" id="tmAll" onclick="setTM('all')" style="font-size:12px;padding:5px 10px">全店舗</button>
+            <button class="btnGray" id="tmArea" onclick="setTM('area')" style="font-size:12px;padding:5px 10px">エリア指定</button>
+            <button class="btnGray" id="tmStore" onclick="setTM('store')" style="font-size:12px;padding:5px 10px">店舗指定</button>
+          </div>
+          <div id="tmPanel"></div>
+          <div id="tmSummary" style="font-size:11px;color:var(--gray);margin-top:6px"></div>
+        </div>
+      </div>
+      <div class="mFooter">
+        <button class="btnGray" onclick="closeModal()">キャンセル</button>
+        ${wfEnabled && !isAdmin ? `<button class="btnOutline" onclick="saveDraft('draft')">💾 下書き保存</button>` : ''}
+        <button class="btnBlue" onclick="sendDoc()">${(wfEnabled && !isAdmin) ? '📋 承認申請する' : '📤 送信する'}</button>
+      </div>
+    </div>`);
+  setTM('all');
+}
+
+// ========== HELPERS ==========
+function myDocs() { return DB.docs.filter(d => d.targets.includes(CU.storeCode)); }
+function isReported(docId) { return DB.reports.some(r => r.docId===docId && r.storeCode===CU.storeCode); }
+function getReport(docId, code) { return DB.reports.find(r => r.docId===docId && r.storeCode===code); }
+function unreadCount() { return myDocs().filter(d => !d.readBy?.includes(CU.storeCode)).length; }
+function pendingDocCount() { return DB.docs.filter(d => complRate(d) < 100).length; }
+function complRate(doc) {
+  if (!doc.targets?.length) return 0;
+  const done = doc.targets.filter(s => DB.reports.some(r => r.docId===doc.id && r.storeCode===s && r.status==='done')).length;
+  return Math.round(done/doc.targets.length*100);
+}
+function storeName(code) { return DB.stores.find(s=>s.code===code)?.name || code; }
+function fmt(iso) { if(!iso) return ''; return iso.replace('T',' ').slice(0,16); }
+function fmtDate(iso) {
+  if(!iso) return '';
+  const d = new Date(iso);
+  return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}<br>${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+function deadlineClass(dl, done) {
+  if (!dl || done) return '';
+  const diff = Math.ceil((new Date(dl) - new Date()) / 86400000);
+  if (diff < 0) return 'overdue';
+  if (diff <= 3) return 'soon';
+  return '';
+}
+function priTag(p) {
+  if (p==='urgent') return '<span class="tag tag-urgent">緊急</span>';
+  if (p==='high') return '<span class="tag tag-high">重要</span>';
+  return '<span class="tag tag-normal">通常</span>';
+}
+function priDot(p) {
+  const cls = p==='urgent'?'urgent':p==='high'?'high':'normal';
+  return `<span class="priDot ${cls}"></span>`;
+}
+
+// ========== LIST PAGE (HQ & STORE) ==========
+function renderListPage(el) {
+  const isHQ = CU.role === 'hq';
+  const catOpts = DB.categories.map(c=>`<option value="${c}">${c}</option>`).join('');
+  el.innerHTML = `
+  <div class="pageContent">
+    <div class="toolbar" id="mainToolbar">
+      ${isHQ ? `<button class="btnPrimary" onclick="openNewDoc()">✏ 新規登録する</button>` : ''}
+      <button class="mobileFilterToggle" onclick="document.getElementById('mainToolbar').classList.toggle('expanded')">🔍 絞り込み ▾</button>
+      <div class="filterSelect">
+        <span style="color:var(--gray);font-size:11px">進捗状況：</span>
+        <select onchange="listFilter.status=this.value;renderTable()">
+          <option value="">すべて</option>
+          <option value="pending" ${listFilter.status==='pending'?'selected':''}>未完了</option>
+          <option value="done" ${listFilter.status==='done'?'selected':''}>完了</option>
+          <option value="overdue" ${listFilter.status==='overdue'?'selected':''}>期限超過</option>
+        </select>
+      </div>
+      <div class="searchBox">
+        <span style="color:var(--gray)">🔍</span>
+        <input type="text" placeholder="${isHQ?'業務指示':'文書'}を検索" oninput="listFilter.q=this.value;renderTable()" value="${listFilter.q}">
+      </div>
+      <div class="filterSelect">
+        <select onchange="listFilter.cat=this.value;renderTable()">
+          <option value="">全カテゴリ</option>${catOpts}
+        </select>
+      </div>
+      <div class="filterSelect">
+        <select onchange="listFilter.priority=this.value;renderTable()">
+          <option value="">全重要度</option>
+          <option value="urgent">緊急</option>
+          <option value="high">重要</option>
+          <option value="normal">通常</option>
+        </select>
+      </div>
+      ${isHQ ? `<div class="toolbarRight">
+        <button class="btnOutline" onclick="goTab('report')">📊 レポート</button>
+      </div>` : ''}
+    </div>
+    <div class="tableWrap">
+      <table id="mainTable">
+        <thead>
+          <tr>
+            <th style="width:32px">ピン</th>
+            <th style="width:36px">重要</th>
+            <th onclick="sortBy('category')" style="width:90px">カテゴリ <span class="sort">▲</span></th>
+            <th onclick="sortBy('title')">タイトル <span class="sort">▲</span></th>
+            ${isHQ ? `<th onclick="sortBy('sentAt')" style="width:100px">登録日時 <span class="sort">▲</span></th>` : ''}
+            <th onclick="sortBy('sentAt')" style="width:100px">${isHQ?'開始日時':'送信日時'} <span class="sort">▲</span></th>
+            <th onclick="sortBy('deadline')" style="width:100px">期限日時 <span class="sort">▲</span></th>
+            <th style="width:130px">進捗状況</th>
+            <th style="width:140px">操作</th>
+          </tr>
+        </thead>
+        <tbody id="mainTbody"></tbody>
+      </table>
+    </div>
+  </div>`;
+  renderTable();
+}
+
+function sortBy(col) {
+  if (listFilter.sort === col) listFilter.asc = !listFilter.asc;
+  else { listFilter.sort = col; listFilter.asc = true; }
+  renderTable();
+}
+
+function renderTable() {
+  const isHQ = CU.role === 'hq';
+  let docs = isHQ ? [...DB.docs] : myDocs();
+  const f = listFilter;
+
+  // Filter
+  if (f.q) docs = docs.filter(d => d.title.includes(f.q) || d.body?.includes(f.q));
+  if (f.cat) docs = docs.filter(d => d.category === f.cat);
+  if (f.priority) docs = docs.filter(d => d.priority === f.priority);
+  if (f.status) {
+    docs = docs.filter(d => {
+      const rate = isHQ ? complRate(d) : (isReported(d.id) ? 100 : 0);
+      const od = d.deadline && new Date(d.deadline) < new Date() && rate < 100;
+      if (f.status === 'done') return rate === 100;
+      if (f.status === 'pending') return rate < 100 && !od;
+      if (f.status === 'overdue') return od;
+      return true;
+    });
+  }
+
+  // Sort
+  docs.sort((a,b) => {
+    let va = a[f.sort] || '', vb = b[f.sort] || '';
+    // pinned first
+    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+    if (va < vb) return f.asc ? -1 : 1;
+    if (va > vb) return f.asc ? 1 : -1;
+    return 0;
+  });
+
+  const tbody = document.getElementById('mainTbody');
+  if (!tbody) return;
+
+  if (docs.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9" class="emptyState"><div class="ei">📭</div><p>該当する文書がありません</p></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = docs.map(d => {
+    const rate = isHQ ? complRate(d) : (isReported(d.id) ? 100 : 0);
+    const done = rate === 100;
+    const dlCls = deadlineClass(d.deadline, done);
+    const totalN = d.targets?.length || 0;
+    const doneN = isHQ ? d.targets?.filter(s => DB.reports.some(r=>r.docId===d.id&&r.storeCode===s&&r.status==='done')).length : (done?1:0);
+    const fillCls = done ? 'done' : (dlCls === 'overdue' ? 'danger' : '');
+    const isUnread = !isHQ && !d.readBy?.includes(CU.storeCode);
+
+    const actionBtns = isHQ
+      ? `<div class="actionBtns">
+          <button class="btnAction detail" onclick="openDocDetail('${d.id}')">指示詳細</button>
+          <button class="btnAction progress" onclick="openDocDetail('${d.id}')">進捗状況</button>
+        </div>`
+      : done
+        ? `<button class="btnAction done-btn" onclick="openStoreDoc('${d.id}')">✅ 報告済</button>`
+        : `<div class="actionBtns">
+            <button class="btnAction detail" onclick="openStoreDoc('${d.id}')">詳細</button>
+            <button class="btnAction report" onclick="openStoreDoc('${d.id}')">完了報告</button>
+          </div>`;
+
+    return `<tr class="${d.pinned?'pinned':''}">
+      <td><button class="pinBtn ${d.pinned?'active':''}" onclick="togglePin('${d.id}',event)" title="ピン留め">📌</button></td>
+      <td>${priDot(d.priority)}</td>
+      <td><span class="tag tag-cat">${d.category}</span></td>
+      <td style="font-weight:${isUnread?'700':'400'};cursor:pointer" onclick="${isHQ?`openDocDetail('${d.id}')`:`openStoreDoc('${d.id}')`}">
+        ${isUnread?'<span style="color:var(--red);font-size:10px;margin-right:4px">●</span>':''}
+        ${!isHQ && d.reminders?.length ? '<span style="font-size:10px;background:var(--orange);color:#fff;padding:1px 5px;border-radius:3px;margin-right:4px">📢催促</span>' : ''}
+        ${d.title}
+        ${d.attachments?.length ? `<span style="font-size:10px;color:var(--gray);margin-left:4px">📎${d.attachments.length}</span>` : ''}
+      </td>
+      ${isHQ ? `<td class="dateCell">${fmtDate(d.sentAt)}</td>` : ''}
+      <td class="dateCell">${fmtDate(d.sentAt)}</td>
+      <td class="dateCell"><span class="${dlCls}">${d.deadline ? fmtDate(d.deadline+'T18:00') : '—'}</span></td>
+      <td class="progressCell">
+        <div class="progressPct">${rate}%</div>
+        <div class="progressSub">(${doneN}/${totalN})</div>
+        <div class="progressBar"><div class="progressFill ${fillCls}" style="width:${rate}%"></div></div>
+      </td>
+      <td>${actionBtns}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function togglePin(id, e) {
+  e.stopPropagation();
+  const d = DB.docs.find(x=>x.id===id);
+  if (d) { d.pinned = !d.pinned; await saveDB(); renderTable(); }
+}
+
+// ========== NEW DOC MODAL ==========
+function openNewDoc() {
+  attachBuf = []; targetBuf = []; targetMode = 'all';
+  const catOpts = DB.categories.map(c=>`<option value="${c}">${c}</option>`).join('');
+  const managers = DB.hqStaff.filter(s=>s.staffRole==='manager');
+  const managerOpts = managers.map(m=>`<option value="${m.id}">${m.name}（${m.department||''}）</option>`).join('');
+  const wfEnabled = DB.workflowEnabled && managers.length > 0;
+  const isAdmin = !CU.staffRole; // adminや通常HQユーザーはワークフロー不要
+
+  showModal(`
+    <div class="modal wide">
+      <div class="modalHeader">
+        <span class="modalTitle">✏ 新規業務指示登録</span>
+        <button class="closeBtn" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modalBody">
+        ${wfEnabled && !isAdmin ? `
+        <div style="background:#e3f2fd;border:1px solid #90caf9;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <span style="color:#1565c0;font-weight:700">⚙ 承認ワークフロー</span>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--text)">
+              <input type="checkbox" id="wfUse" checked style="accent-color:var(--blue)" onchange="document.getElementById('wfPanel').style.display=this.checked?'':'none'"> 所属長の承認を経て送信する
+            </label>
+          </div>
+          <div id="wfPanel">
+            <label style="font-size:11px;color:var(--gray);font-weight:600;display:block;margin-bottom:4px">承認者（所属長） *</label>
+            <select id="wfApproverId" style="width:100%;padding:7px 10px;border:1px solid #90caf9;border-radius:6px;font-family:inherit;font-size:13px;background:#fff">
+              <option value="">所属長を選択してください</option>${managerOpts}
+            </select>
+          </div>
+        </div>` : ''}
+        <div class="mRow"><label>タイトル *</label><input type="text" id="nTitle" placeholder="例：7月度衛生点検について"></div>
+        <div class="mGrid">
+          <div class="mRow"><label>カテゴリ</label><select id="nCat">${catOpts}</select></div>
+          <div class="mRow"><label>重要度</label>
+            <select id="nPri"><option value="normal">通常</option><option value="high">重要</option><option value="urgent">緊急</option></select>
+          </div>
+        </div>
+        <div class="mRow"><label>連絡文 *</label><textarea id="nBody" rows="5" placeholder="連絡内容を入力…"></textarea></div>
+        <div class="mGrid">
+          <div class="mRow"><label>完了期限</label><input type="date" id="nDl"></div>
+          <div class="mRow" style="display:flex;flex-direction:column;justify-content:flex-end">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;text-transform:none;letter-spacing:0">
+              <input type="checkbox" id="nNoDl" onchange="document.getElementById('nDl').disabled=this.checked"> 期限なし
+            </label>
+          </div>
+        </div>
+        <div class="mRow">
+          <label>添付資料</label>
+          <input type="file" multiple accept=".pdf,.xlsx,.docx,.csv,.png,.jpg,.jpeg" onchange="addAttach(this)">
+          <div id="attachPv" class="attachList"></div>
+        </div>
+        <div class="mRow">
+          <label>送信先</label>
+          <div style="display:flex;gap:6px;margin-bottom:8px">
+            <button class="btnGray" id="tmAll" onclick="setTM('all')" style="font-size:12px;padding:5px 10px">全店舗</button>
+            <button class="btnGray" id="tmArea" onclick="setTM('area')" style="font-size:12px;padding:5px 10px">エリア指定</button>
+            <button class="btnGray" id="tmStore" onclick="setTM('store')" style="font-size:12px;padding:5px 10px">店舗指定</button>
+          </div>
+          <div id="tmPanel"></div>
+          <div id="tmSummary" style="font-size:11px;color:var(--gray);margin-top:6px"></div>
+        </div>
+      </div>
+      <div class="mFooter">
+        <button class="btnGray" onclick="closeModal()">キャンセル</button>
+        ${wfEnabled && !isAdmin ? `<button class="btnOutline" onclick="saveDraft('draft')">💾 下書き保存</button>` : ''}
+        <button class="btnBlue" onclick="sendDoc()">${(wfEnabled && !isAdmin) ? '📋 承認申請する' : '📤 送信する'}</button>
+      </div>
+    </div>`);
+  setTM('all');
+}
+function setTM(m) {
+  targetMode = m;
+  ['All','Area','Store'].forEach(x => {
+    const el = document.getElementById('tm'+x);
+    if (el) el.style.background = (m===x.toLowerCase()?'var(--blue)':''), el.style.color = (m===x.toLowerCase()?'#fff':'');
+  });
+  const panel = document.getElementById('tmPanel');
+  if (m==='all') {
+    targetBuf = DB.stores.map(s=>s.code);
+    panel.innerHTML = `<p style="color:var(--green);font-size:12px">✅ 全${DB.stores.length}店舗に送信</p>`;
+  } else if (m==='area') {
+    targetBuf = [];
+    panel.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:6px">${DB.areas.map(a =>
+      `<label class="chip"><input type="checkbox" value="${a}" onchange="updAreaT()"> ${a}</label>`).join('')}</div>`;
+  } else {
+    targetBuf = [];
+    panel.innerHTML = `<div class="storeSel">
+      <div class="storeSelHead">
+        <button class="btnGray" style="font-size:11px;padding:3px 8px" onclick="selAllStores(true)">全選択</button>
+        <button class="btnGray" style="font-size:11px;padding:3px 8px" onclick="selAllStores(false)">全解除</button>
+      </div>
+      <div class="storeSelList">${DB.stores.map(s=>
+        `<label class="storeChip"><input type="checkbox" value="${s.code}" onchange="updStoreT()"> ${s.name}</label>`).join('')}
+      </div></div>`;
+  }
+  updTSummary();
+}
+function updAreaT() {
+  targetBuf = [];
+  document.querySelectorAll('#tmPanel input:checked').forEach(cb => {
+    DB.stores.filter(s=>s.area===cb.value).forEach(s=>targetBuf.push(s.code));
+  });
+  updTSummary();
+}
+function updStoreT() {
+  targetBuf = Array.from(document.querySelectorAll('#tmPanel input:checked')).map(cb=>cb.value);
+  updTSummary();
+}
+function selAllStores(v) { document.querySelectorAll('#tmPanel input').forEach(cb=>cb.checked=v); updStoreT(); }
+function updTSummary() {
+  const el = document.getElementById('tmSummary');
+  if (el) el.textContent = `選択中: ${targetBuf.length}店舗`;
+}
+function addAttach(inp) {
+  Array.from(inp.files).forEach(f => {
+    const r = new FileReader();
+    r.onload = e => { attachBuf.push({name:f.name,size:f.size,data:e.target.result,type:f.type}); renderAttachPv(); };
+    r.readAsDataURL(f);
+  });
+}
+function renderAttachPv() {
+  const el = document.getElementById('attachPv');
+  if (!el) return;
+  el.innerHTML = attachBuf.map((a,i)=>`<div class="attachItem">📎 ${a.name} <span style="color:var(--gray);font-size:10px">${Math.round(a.size/1024)}KB</span> <span onclick="attachBuf.splice(${i},1);renderAttachPv()" style="cursor:pointer;color:var(--red)">✕</span></div>`).join('');
+}
+function buildDocPayload() {
+  const title = document.getElementById('nTitle').value.trim();
+  const body = document.getElementById('nBody').value.trim();
+  if (!title) { toast('タイトルを入力してください','error'); return null; }
+  if (!body) { toast('連絡文を入力してください','error'); return null; }
+  if (!targetBuf.length) { toast('送信先を選択してください','error'); return null; }
+  const noDl = document.getElementById('nNoDl').checked;
+  const dlVal = document.getElementById('nDl').value;
+  return {
+    title, body,
+    category: document.getElementById('nCat').value,
+    priority: document.getElementById('nPri').value,
+    deadline: noDl ? null : (dlVal || null),
+    targets: [...targetBuf],
+    attachments: attachBuf.map(a=>({...a})),
+    authorId: CU.id,
+    authorName: CU.name,
+  };
+}
+async function saveDraft(status='draft') {
+  const payload = buildDocPayload();
+  if (!payload) return;
+  const draft = {
+    id: 'DR'+String(DB.nextDraftId++).padStart(4,'0'),
+    ...payload,
+    status, // draft | pending | approved | rejected
+    createdAt: new Date().toISOString(),
+    approverId: null,
+    approverName: null,
+    approvedAt: null,
+    rejectComment: null,
+  };
+  DB.docDrafts.push(draft);
+  await saveDB(); closeModal();
+  toast('下書きを保存しました','success');
+  goTab('drafts');
+}
+async function sendDoc() {
+  const payload = buildDocPayload();
+  if (!payload) return;
+  const managers = DB.hqStaff.filter(s=>s.staffRole==='manager');
+  const wfEnabled = DB.workflowEnabled && managers.length > 0 && !(!CU.staffRole);
+  const wfCb = document.getElementById('wfUse');
+  const useWF = wfCb && wfCb.checked && wfEnabled;
+
+  if (useWF) {
+    // 承認ワークフロー申請
+    const approverId = document.getElementById('wfApproverId')?.value;
+    if (!approverId) { toast('承認者（所属長）を選択してください','error'); return; }
+    const approver = DB.hqStaff.find(s=>s.id===approverId);
+    const draft = {
+      id: 'DR'+String(DB.nextDraftId++).padStart(4,'0'),
+      ...payload,
+      status: 'pending',
+      approverId,
+      approverName: approver?.name || '',
+      createdAt: new Date().toISOString(),
+      approvedAt: null,
+      rejectComment: null,
+    };
+    DB.docDrafts.push(draft);
+    await saveDB(); closeModal();
+    toast(`「${payload.title}」を${approver?.name}に承認申請しました`,'success');
+    renderTabs(); goTab('list');
+  } else {
+    // 直接送信
+    const doc = {
+      id: 'D'+String(DB.nextId++).padStart(4,'0'),
+      ...payload,
+      sentAt: new Date().toISOString(),
+      sentBy: CU.name,
+      readBy: [],
+      pinned: false,
+    };
+    DB.docs.unshift(doc);
+    await saveDB(); closeModal();
+    toast(`「${payload.title}」を${targetBuf.length}店舗に送信しました`,'success');
+    renderTable();
+  }
+}
+
+// ========== WORKFLOW: APPROVAL PAGE (所属長) ==========
+function renderApprovalPage(el) {
+  const pending = DB.docDrafts.filter(d => d.status==='pending' && d.approverId===CU.id);
+  el.innerHTML = `
+  <div class="pageContent">
+    <div class="toolbar">
+      <span style="font-size:13px;font-weight:700;color:var(--text)">承認待ち文書</span>
+      <span style="font-size:12px;color:var(--gray);margin-left:8px">${pending.length}件</span>
+    </div>
+    <div style="padding:16px">
+      ${!pending.length ? '<div class="emptyState"><div class="ei">✅</div><p>承認待ちの文書はありません</p></div>' :
+      pending.map(d=>`
+        <div style="background:#fff;border:2px solid #90caf9;border-radius:10px;padding:16px;margin-bottom:12px">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+            <span class="tag tag-cat">${d.category}</span>${priTag(d.priority)}
+            <span style="font-size:11px;background:#e3f2fd;color:var(--blue);padding:2px 8px;border-radius:4px;font-weight:700">⏳ 承認待ち</span>
+            <span style="margin-left:auto;font-size:11px;color:var(--gray)">申請者: ${d.authorName} / ${fmt(d.createdAt)}</span>
+          </div>
+          <h3 style="font-size:15px;font-weight:700;margin-bottom:6px">${d.title}</h3>
+          <div style="background:#f9f9f9;border-radius:6px;padding:10px;font-size:13px;white-space:pre-wrap;margin-bottom:10px;max-height:120px;overflow-y:auto">${d.body}</div>
+          <div style="display:flex;gap:8px;font-size:12px;color:var(--gray);margin-bottom:12px">
+            <span>送信先: ${d.targets.length}店舗</span>
+            ${d.deadline?`<span>期限: ${d.deadline}</span>`:''}
+            ${d.attachments?.length?`<span>📎 ${d.attachments.length}件</span>`:''}
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btnGreen" onclick="approveDoc('${d.id}')">✅ 承認して送信</button>
+            <button class="btnOutline" style="color:var(--blue)" onclick="openApprovalDetail('${d.id}')">📄 詳細確認</button>
+            <button style="padding:7px 14px;border:1px solid var(--red);border-radius:7px;background:#fff;color:var(--red);font-family:inherit;font-size:13px;cursor:pointer" onclick="openRejectModal('${d.id}')">❌ 差戻し</button>
+          </div>
+        </div>`).join('')}
+      <div style="margin-top:16px">
+        <h4 style="font-size:12px;color:var(--gray);margin-bottom:10px">承認済み / 差戻し履歴</h4>
+        ${DB.docDrafts.filter(d=>d.approverId===CU.id && (d.status==='approved'||d.status==='rejected')).slice().reverse().map(d=>`
+          <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <span class="tag ${d.status==='approved'?'tag-done':'tag-urgent'}">${d.status==='approved'?'✅ 承認済':'❌ 差戻し'}</span>
+            <span style="font-weight:600">${d.title}</span>
+            <span style="font-size:11px;color:var(--gray);margin-left:auto">${d.authorName} / ${fmt(d.approvedAt||d.createdAt)}</span>
+            ${d.rejectComment?`<span style="font-size:11px;color:var(--red);width:100%">差戻し理由: ${d.rejectComment}</span>`:''}
+          </div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+function openApprovalDetail(draftId) {
+  const d = DB.docDrafts.find(x=>x.id===draftId);
+  showModal(`<div class="modal wide">
+    <div class="modalHeader"><span class="modalTitle">文書詳細確認</span><button class="closeBtn" onclick="closeModal()">✕</button></div>
+    <div class="modalBody">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"><span class="tag tag-cat">${d.category}</span>${priTag(d.priority)}</div>
+      <h2 style="font-size:16px;margin-bottom:6px">${d.title}</h2>
+      <p style="font-size:11px;color:var(--gray);margin-bottom:12px">申請者: ${d.authorName} / ${fmt(d.createdAt)} / 送信先: ${d.targets.length}店舗</p>
+      <div style="background:#f9f9f9;border-radius:8px;padding:14px;white-space:pre-wrap;font-size:13px;line-height:1.8;margin-bottom:14px">${d.body}</div>
+      ${d.attachments?.length?`<div class="attachList">${d.attachments.map(a=>`<div class="attachItem" onclick="dlFile('${a.data}','${a.name}')">📎 ${a.name}</div>`).join('')}</div>`:''}
+    </div>
+    <div class="mFooter">
+      <button style="padding:7px 14px;border:1px solid var(--red);border-radius:7px;background:#fff;color:var(--red);font-family:inherit;font-size:13px;cursor:pointer" onclick="closeModal();openRejectModal('${d.id}')">❌ 差戻し</button>
+      <button class="btnGray" onclick="closeModal()">閉じる</button>
+      <button class="btnGreen" onclick="closeModal();approveDoc('${d.id}')">✅ 承認して送信</button>
+    </div>
+  </div>`);
+}
+async function approveDoc(draftId) {
+  if (!confirm('承認してこの文書を全店舗に送信しますか？')) return;
+  const d = DB.docDrafts.find(x=>x.id===draftId);
+  const doc = {
+    id: 'D'+String(DB.nextId++).padStart(4,'0'),
+    title: d.title, body: d.body,
+    category: d.category, priority: d.priority,
+    deadline: d.deadline,
+    targets: d.targets,
+    attachments: d.attachments||[],
+    sentAt: new Date().toISOString(),
+    sentBy: d.authorName,
+    approvedBy: CU.name,
+    readBy: [],
+    pinned: false,
+  };
+  DB.docs.unshift(doc);
+  d.status = 'approved';
+  d.approvedAt = new Date().toISOString();
+  await saveDB();
+  toast(`「${d.title}」を承認・送信しました`,'success');
+  renderTabs();
+  renderApprovalPage(document.getElementById('pageArea'));
+}
+function openRejectModal(draftId) {
+  showModal(`<div class="modal">
+    <div class="modalHeader"><span class="modalTitle">❌ 差戻し</span><button class="closeBtn" onclick="closeModal()">✕</button></div>
+    <div class="modalBody">
+      <p style="font-size:13px;margin-bottom:12px;color:var(--text2)">差戻し理由を入力してください。担当者に通知されます。</p>
+      <div class="mRow"><label>差戻し理由 *</label>
+        <textarea id="rejectReason" rows="4" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:13px;resize:vertical" placeholder="例：内容の修正が必要です。〇〇を追記してください。"></textarea>
+      </div>
+    </div>
+    <div class="mFooter">
+      <button class="btnGray" onclick="closeModal()">キャンセル</button>
+      <button class="btnRed" onclick="doReject('${draftId}')">差戻しする</button>
+    </div>
+  </div>`);
+}
+async function doReject(draftId) {
+  const reason = document.getElementById('rejectReason').value.trim();
+  if (!reason) { toast('差戻し理由を入力してください','error'); return; }
+  const d = DB.docDrafts.find(x=>x.id===draftId);
+  d.status = 'rejected';
+  d.rejectComment = reason;
+  d.approvedAt = new Date().toISOString();
+  await saveDB(); closeModal();
+  toast('差戻しました');
+  renderTabs();
+  renderApprovalPage(document.getElementById('pageArea'));
+}
+
+// ========== WORKFLOW: DRAFTS PAGE (担当者) ==========
+function renderDraftsPage(el) {
+  const myDrafts = DB.docDrafts.filter(d=>d.authorId===CU.id).slice().reverse();
+  el.innerHTML = `
+  <div class="pageContent">
+    <div class="toolbar">
+      <span style="font-size:13px;font-weight:700">下書き・申請状況</span>
+    </div>
+    <div style="padding:16px">
+      ${!myDrafts.length ? '<div class="emptyState"><div class="ei">📝</div><p>下書きがありません</p></div>' :
+      myDrafts.map(d => {
+        const statusMap = {draft:'💾 下書き',pending:'⏳ 承認待ち',approved:'✅ 承認・送信済',rejected:'❌ 差戻し'};
+        const colorMap = {draft:'#757575',pending:'#1565c0',approved:'#2e7d32',rejected:'#c62828'};
+        const bgMap = {draft:'#f5f5f5',pending:'#e3f2fd',approved:'#e8f5e9',rejected:'#ffebee'};
+        return `<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:10px;${d.status==='rejected'?'border-left:3px solid var(--red)':d.status==='pending'?'border-left:3px solid var(--blue)':''}">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+            <span class="tag tag-cat">${d.category}</span>${priTag(d.priority)}
+            <span style="font-size:11px;padding:2px 8px;border-radius:4px;background:${bgMap[d.status]};color:${colorMap[d.status]};font-weight:700">${statusMap[d.status]}</span>
+            <span style="margin-left:auto;font-size:11px;color:var(--gray)">${fmt(d.createdAt)}</span>
+          </div>
+          <h3 style="font-size:14px;font-weight:700;margin-bottom:4px">${d.title}</h3>
+          <p style="font-size:12px;color:var(--gray)">送信先: ${d.targets.length}店舗${d.approverName?' / 承認者: '+d.approverName:''}</p>
+          ${d.rejectComment?`<div style="margin-top:8px;padding:8px;background:var(--red-light);border-radius:6px;border-left:3px solid var(--red)">
+            <p style="font-size:11px;color:var(--red);font-weight:700;margin-bottom:3px">差戻し理由</p>
+            <p style="font-size:12px">${d.rejectComment}</p>
+          </div>`:''}
+          <div style="display:flex;gap:6px;margin-top:10px">
+            ${(d.status==='draft'||d.status==='rejected') ? `<button class="btnBlue" style="font-size:12px" onclick="resubmitDraft('${d.id}')">✏ 編集・再申請</button>` : ''}
+            ${d.status==='draft' ? `<button class="btnOutline" style="font-size:12px" onclick="submitDraftForApproval('${d.id}')">📋 承認申請する</button>` : ''}
+            <button class="btnOutline" style="font-size:12px;color:var(--red);border-color:var(--red)" onclick="deleteDraft('${d.id}')">削除</button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+}
+function submitDraftForApproval(draftId) {
+  const d = DB.docDrafts.find(x=>x.id===draftId);
+  const managers = DB.hqStaff.filter(s=>s.staffRole==='manager');
+  const managerOpts = managers.map(m=>`<option value="${m.id}">${m.name}（${m.department||''}）</option>`).join('');
+  showModal(`<div class="modal">
+    <div class="modalHeader"><span class="modalTitle">承認申請</span><button class="closeBtn" onclick="closeModal()">✕</button></div>
+    <div class="modalBody">
+      <p style="margin-bottom:12px;font-size:13px">「<strong>${d.title}</strong>」の承認申請先を選択してください。</p>
+      <div class="mRow"><label>承認者（所属長） *</label>
+        <select id="submitApproverId" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:13px">
+          <option value="">所属長を選択してください</option>${managerOpts}
+        </select>
+      </div>
+    </div>
+    <div class="mFooter">
+      <button class="btnGray" onclick="closeModal()">キャンセル</button>
+      <button class="btnBlue" onclick="doSubmitDraft('${draftId}')">📋 申請する</button>
+    </div>
+  </div>`);
+}
+async function doSubmitDraft(draftId) {
+  const approverId = document.getElementById('submitApproverId').value;
+  if (!approverId) { toast('承認者を選択してください','error'); return; }
+  const d = DB.docDrafts.find(x=>x.id===draftId);
+  const approver = DB.hqStaff.find(s=>s.id===approverId);
+  d.status = 'pending';
+  d.approverId = approverId;
+  d.approverName = approver?.name||'';
+  d.rejectComment = null;
+  await saveDB(); closeModal();
+  toast(`${approver?.name}に承認申請しました`,'success');
+  renderTabs(); renderDraftsPage(document.getElementById('pageArea'));
+}
+async function resubmitDraft(draftId) {
+  // 差戻しされた場合の再申請（編集→再申請）
+  const d = DB.docDrafts.find(x=>x.id===draftId);
+  // draftに戻してopenNewDocに相当するモーダルを開く
+  d.status = 'draft'; d.rejectComment = null;
+  await saveDB();
+  toast('下書きに戻しました。編集後に再申請してください');
+  renderDraftsPage(document.getElementById('pageArea'));
+}
+async function deleteDraft(draftId) {
+  if (!confirm('削除しますか？')) return;
+  DB.docDrafts = DB.docDrafts.filter(d=>d.id!==draftId);
+  await saveDB(); toast('削除しました');
+  renderDraftsPage(document.getElementById('pageArea'));
+}
+
+// ========== HQ: DOC DETAIL ==========
+function openDocDetail(id) {
+  const doc = DB.docs.find(d=>d.id===id);
+  if (!doc) return;
+  const rate = complRate(doc);
+  const doneStores = doc.targets.filter(s => DB.reports.some(r=>r.docId===doc.id&&r.storeCode===s&&r.status==='done'));
+  const pendStores = doc.targets.filter(s => !DB.reports.some(r=>r.docId===doc.id&&r.storeCode===s));
+  showModal(`
+    <div class="modal wide">
+      <div class="modalHeader">
+        <span class="modalTitle">指示詳細 — ${doc.id}</span>
+        <button class="closeBtn" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modalBody">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+          <span class="tag tag-cat">${doc.category}</span>${priTag(doc.priority)}
+          ${doc.deadline?`<span class="tag" style="background:#f5f5f5;color:var(--gray)">📅 期限: ${doc.deadline}</span>`:''}
+        </div>
+        <h2 style="font-size:16px;margin-bottom:6px">${doc.title}</h2>
+        <p style="font-size:11px;color:var(--gray);margin-bottom:12px">登録: ${fmt(doc.sentAt)} / ${doc.sentBy} / ${doc.targets.length}店舗</p>
+        <div style="background:#f9f9f9;border-radius:8px;padding:14px;line-height:1.8;white-space:pre-wrap;font-size:13px;margin-bottom:14px">${doc.body}</div>
+        ${doc.attachments?.length?`<div><p style="font-size:11px;color:var(--gray);font-weight:600;margin-bottom:6px">添付資料</p><div class="attachList">${doc.attachments.map(a=>`<div class="attachItem" onclick="dlFile('${a.data}','${a.name}')">📎 ${a.name}</div>`).join('')}</div></div>`:''}
+        <div class="divider"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <span style="font-size:13px;font-weight:700">進捗状況</span>
+          <span style="font-size:20px;font-weight:700;color:${rate===100?'var(--green)':'var(--blue)'}">${rate}%</span>
+        </div>
+        <div class="progressBar" style="height:8px;margin-bottom:16px"><div class="progressFill ${rate===100?'done':''}" style="width:${rate}%"></div></div>
+        <div class="repGrid">
+          <div>
+            <p style="font-size:11px;color:var(--green);font-weight:700;margin-bottom:8px">✅ 完了 (${doneStores.length})</p>
+            ${doneStores.map(s=>{
+              const r=getReport(doc.id,s);
+              return `<div class="storeRepCard done">
+                <div class="sName">${storeName(s)}</div>
+                <div class="sMeta">${fmt(r?.reportedAt)}</div>
+                ${r?.comment?`<p style="font-size:12px;margin-top:4px">${r.comment}</p>`:''}
+                ${r?.photos?.length?`<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">${r.photos.map(p=>`<div class="photoWrap" onclick="showPhoto('${p}')"><img src="${p}"></div>`).join('')}</div>`:''}
+              </div>`;
+            }).join('')}
+          </div>
+          <div>
+            <p style="font-size:11px;color:var(--orange);font-weight:700;margin-bottom:8px">⏳ 未完了 (${pendStores.length})</p>
+            ${pendStores.map(s=>`<div class="storeRepCard pending"><div class="sName">${storeName(s)}</div><div class="sMeta">未報告</div></div>`).join('')}
+          </div>
+        </div>
+      </div>
+      <div class="mFooter">
+        <button class="btnRed" onclick="delDoc('${doc.id}')">削除</button>
+        <button class="btnOutline" onclick="saveDocAsTemplate('${doc.id}')">📄 テンプレートとして保存</button>
+        ${complRate(doc) < 100 ? `<button class="btnOutline" style="color:var(--orange);border-color:var(--orange)" onclick="openReminderModal('${doc.id}')">📢 催促送信</button>` : ''}
+        <button class="btnGray" onclick="closeModal()">閉じる</button>
+      </div>
+    </div>`);
+}
+async function delDoc(id) {
+  if (!confirm('この文書を削除しますか？')) return;
+  DB.docs = DB.docs.filter(d=>d.id!==id);
+  DB.reports = DB.reports.filter(r=>r.docId!==id);
+  await saveDB(); closeModal(); toast('削除しました'); renderTable();
+}
+
+// ========== STORE: DOC VIEW & REPORT ==========
+async function openStoreDoc(id) {
+  const doc = DB.docs.find(d=>d.id===id);
+  if (!doc) return;
+  if (!doc.readBy) doc.readBy=[];
+  if (!doc.readBy.includes(CU.storeCode)) { doc.readBy.push(CU.storeCode); await saveDB(); renderTabs(); renderTable(); }
+  const done = isReported(id);
+  const rep = getReport(id, CU.storeCode);
+  photoBuf = [];
+  showModal(`
+    <div class="modal wide">
+      <div class="modalHeader">
+        <span class="modalTitle">業務指示 確認</span>
+        <button class="closeBtn" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modalBody">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+          <span class="tag tag-cat">${doc.category}</span>${priTag(doc.priority)}
+          ${doc.deadline?`<span class="tag" style="background:#f5f5f5;color:var(--gray)">📅 期限: ${doc.deadline}</span>`:''}
+        </div>
+        <h2 style="font-size:16px;margin-bottom:6px">${doc.title}</h2>
+        <p style="font-size:11px;color:var(--gray);margin-bottom:12px">連絡元: ${doc.sentBy} / ${fmt(doc.sentAt)}</p>
+        <div style="background:#f9f9f9;border-radius:8px;padding:14px;line-height:1.8;white-space:pre-wrap;font-size:13px;margin-bottom:14px">${doc.body}</div>
+        ${doc.attachments?.length?`<div style="margin-bottom:14px"><p style="font-size:11px;color:var(--gray);font-weight:600;margin-bottom:6px">添付資料</p><div class="attachList">${doc.attachments.map(a=>`<div class="attachItem" onclick="dlFile('${a.data}','${a.name}')">📎 ${a.name}</div>`).join('')}</div></div>`:''}
+        <div class="divider"></div>
+        ${done ? `
+          <div style="background:var(--green-light);border:1px solid #a5d6a7;border-radius:8px;padding:14px">
+            <p style="color:var(--green);font-weight:700;margin-bottom:4px">✅ 完了報告済み</p>
+            <p style="font-size:11px;color:var(--gray)">${fmt(rep?.reportedAt)}</p>
+            ${rep?.comment?`<p style="font-size:13px;margin-top:6px">${rep.comment}</p>`:''}
+            ${rep?.photos?.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${rep.photos.map(p=>`<div class="photoWrap" onclick="showPhoto('${p}')"><img src="${p}"></div>`).join('')}</div>`:''}
+          </div>` : `
+          <h3 style="font-size:13px;font-weight:700;margin-bottom:12px">📝 完了報告</h3>
+          <div class="mRow">
+            <label>ステータス</label>
+            <select id="rStat"><option value="done">✅ 完了</option><option value="na">⛔ 対応不要</option></select>
+          </div>
+          <div class="mRow">
+            <label>コメント（任意）</label>
+            <textarea id="rCom" rows="3" placeholder="対応内容など…"></textarea>
+          </div>
+          <div class="mRow">
+            <label>写真添付（任意）</label>
+            <input type="file" multiple accept="image/*" onchange="addPhoto(this)">
+            <div id="photoPv" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div>
+          </div>`}
+      </div>
+      <div class="mFooter">
+        <button class="btnGray" onclick="closeModal()">閉じる</button>
+        ${!done?`<button class="btnGreen" onclick="submitReport('${id}')">📤 報告する</button>`:''}
+      </div>
+    </div>`);
+}
+function addPhoto(inp) {
+  Array.from(inp.files).forEach(f => {
+    const r = new FileReader();
+    r.onload = async e=>{
+      resizeImg(e.target.result, 400, data => { photoBuf.push(data); renderPhotoPv(); });
+    };
+    r.readAsDataURL(f);
+  });
+}
+function resizeImg(src, max, cb) {
+  const img = new Image();
+  img.onload = () => {
+    const sc = Math.min(1, max/img.width, max/img.height);
+    const cv = document.createElement('canvas');
+    cv.width = img.width*sc; cv.height = img.height*sc;
+    cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+    cb(cv.toDataURL('image/jpeg',.7));
+  };
+  img.src = src;
+}
+function renderPhotoPv() {
+  const el = document.getElementById('photoPv');
+  if (!el) return;
+  el.innerHTML = photoBuf.map((p,i)=>`<div class="photoWrap"><img src="${p}" onclick="showPhoto('${p}')"><span class="photoRemove" onclick="photoBuf.splice(${i},1);renderPhotoPv()">✕</span></div>`).join('');
+}
+async function submitReport(docId) {
+  const stat = document.getElementById('rStat').value;
+  const com = document.getElementById('rCom').value.trim();
+  DB.reports.push({docId, storeCode:CU.storeCode, status:stat, comment:com, photos:[...photoBuf], reportedAt:new Date().toISOString()});
+  await saveDB(); closeModal(); toast('報告を送信しました','success');
+  renderTabs(); renderTable();
+}
+
+// ========== HQ: REPORT PAGE ==========
+function renderReportPage(el) {
+  el.innerHTML = `
+  <div class="pageContent">
+    <div class="toolbar">
+      <input type="text" placeholder="🔍 件名検索" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:12px;width:200px" id="rpSearch" oninput="renderRpList()">
+      <div class="filterSelect">
+        <select id="rpStat" onchange="renderRpList()">
+          <option value="">すべて</option>
+          <option value="done">完了</option>
+          <option value="pending">未完了</option>
+        </select>
+      </div>
+    </div>
+    <div style="padding:16px" id="rpList"></div>
+  </div>`;
+  renderRpList();
+}
+function renderRpList() {
+  const q = document.getElementById('rpSearch')?.value || '';
+  const st = document.getElementById('rpStat')?.value || '';
+  let docs = DB.docs.filter(d => (!q || d.title.includes(q)) && (!st || (st==='done'?complRate(d)===100:complRate(d)<100)));
+  const el = document.getElementById('rpList');
+  if (!el) return;
+  if (!docs.length) { el.innerHTML = '<div class="emptyState"><div class="ei">📭</div><p>該当なし</p></div>'; return; }
+  el.innerHTML = docs.map(d => {
+    const rate = complRate(d);
+    const doneN = d.targets.filter(s=>DB.reports.some(r=>r.docId===d.id&&r.storeCode===s&&r.status==='done')).length;
+    return `<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <div style="flex:1">
+        <div style="font-weight:600;margin-bottom:4px">${d.title}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap"><span class="tag tag-cat">${d.category}</span>${priTag(d.priority)}${d.deadline?`<span style="font-size:11px;color:var(--gray)">期限: ${d.deadline}</span>`:''}</div>
+      </div>
+      <div style="text-align:right;min-width:120px">
+        <div style="font-size:22px;font-weight:700;color:${rate===100?'var(--green)':'var(--blue)'}">${doneN} / ${d.targets.length}</div>
+        <div style="font-size:10px;color:var(--gray)">完了店舗</div>
+        <div class="progressBar" style="margin-top:4px"><div class="progressFill ${rate===100?'done':''}" style="width:${rate}%"></div></div>
+      </div>
+      <button class="btnOutline" onclick="openDocDetail('${d.id}')">詳細・店舗一覧</button>
+    </div>`;
+  }).join('');
+}
+
+// ========== STORE: REPORTED ==========
+function renderReportedPage(el) {
+  const docs = myDocs().filter(d=>isReported(d.id));
+  el.innerHTML = `
+  <div style="padding:16px">
+    ${!docs.length ? '<div class="emptyState"><div class="ei">📭</div><p>報告済み文書なし</p></div>' :
+    docs.map(d=>{
+      const r=getReport(d.id,CU.storeCode);
+      return `<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+          <span class="tag tag-cat">${d.category}</span>
+          <span style="font-weight:600">${d.title}</span>
+          <span class="tag tag-done" style="margin-left:auto">✅ 報告済</span>
+        </div>
+        <p style="font-size:11px;color:var(--gray)">${fmt(r?.reportedAt)}</p>
+        ${r?.comment?`<p style="font-size:13px;margin-top:6px;padding:8px;background:#f9f9f9;border-radius:6px">${r.comment}</p>`:''}
+        ${r?.photos?.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${r.photos.map(p=>`<div class="photoWrap" onclick="showPhoto('${p}')"><img src="${p}"></div>`).join('')}</div>`:''}
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+// ========== STORE→HQ MESSAGE ==========
+function renderMsgStorePage(el) {
+  const myMsgs = DB.messages.filter(m => m.storeCode === CU.storeCode).sort((a,b) => b.sentAt.localeCompare(a.sentAt));
+  const deptOpts = DB.departments.length
+    ? `<option value="">宛先部署を選択</option>` + DB.departments.map(d=>`<option value="${d.name}">${d.name}</option>`).join('')
+    : `<option value="本部">本部（総合）</option>`;
+  el.innerHTML = `
+  <div style="padding:16px;max-width:760px">
+    <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:16px">
+      <h3 style="font-size:14px;font-weight:700;margin-bottom:14px">📨 本部へメッセージ送信</h3>
+      <div class="mRow"><label>宛先部署</label>
+        <select id="msgDept" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:13px">${deptOpts}</select>
+      </div>
+      <div class="mRow"><label>件名 *</label>
+        <input type="text" id="msgSubject" placeholder="例：商品の欠品について" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:13px">
+      </div>
+      <div class="mRow"><label>種別</label>
+        <select id="msgType" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:13px">
+          <option value="問い合わせ">問い合わせ</option>
+          <option value="報告">報告</option>
+          <option value="相談">相談</option>
+          <option value="要望">要望</option>
+          <option value="緊急連絡">緊急連絡</option>
+        </select>
+      </div>
+      <div class="mRow"><label>メッセージ *</label>
+        <textarea id="msgBody" rows="5" placeholder="内容を入力してください…" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:13px;resize:vertical"></textarea>
+      </div>
+      <div style="display:flex;justify-content:flex-end">
+        <button class="btnBlue" onclick="sendStoreMsg()">📤 送信する</button>
+      </div>
+    </div>
+    <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px">
+      <h3 style="font-size:13px;font-weight:700;margin-bottom:12px">送信履歴</h3>
+      ${!myMsgs.length ? '<div class="emptyState" style="padding:24px"><div class="ei">📭</div><p>送信履歴はありません</p></div>' :
+        myMsgs.map(m=>`
+        <div style="border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;${m.reply?'border-left:3px solid var(--green)':''}">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+            <span class="tag tag-cat">${m.dept||'本部'}</span>
+            <span style="font-size:11px;padding:2px 7px;border-radius:4px;background:#f5f5f5;color:var(--gray)">${m.type}</span>
+            <span style="font-weight:600">${m.subject}</span>
+            <span style="font-size:11px;color:var(--gray);margin-left:auto">${fmt(m.sentAt)}</span>
+          </div>
+          <p style="font-size:12px;color:var(--text2);white-space:pre-wrap">${m.body}</p>
+          ${m.reply?`<div style="margin-top:8px;padding:8px;background:var(--green-light);border-radius:6px;border-left:3px solid var(--green)">
+            <p style="font-size:11px;color:var(--green);font-weight:700;margin-bottom:3px">✅ 本部より返信 — ${fmt(m.repliedAt)}</p>
+            <p style="font-size:12px;white-space:pre-wrap">${m.reply}</p>
+          </div>`:`<p style="font-size:11px;color:var(--gray);margin-top:6px">⏳ 返信待ち</p>`}
+        </div>`).join('')}
+    </div>
+  </div>`;
+}
+async function sendStoreMsg() {
+  const subject=document.getElementById('msgSubject').value.trim();
+  const body=document.getElementById('msgBody').value.trim();
+  if(!subject){toast('件名を入力してください','error');return;}
+  if(!body){toast('メッセージを入力してください','error');return;}
+  DB.messages.push({
+    id:'M'+String(DB.nextMsgId++).padStart(4,'0'),
+    storeCode:CU.storeCode, storeName:CU.name,
+    dept:document.getElementById('msgDept').value||'本部',
+    type:document.getElementById('msgType').value,
+    subject, body,
+    sentAt:new Date().toISOString(),
+    readByHQ:false, reply:null, repliedAt:null,
+  });
+  await saveDB(); toast('メッセージを送信しました','success');
+  renderMsgStorePage(document.getElementById('pageArea'));
+}
+
+// ========== HQ: MESSAGE BOX ==========
+async function renderMsgBoxPage(el) {
+  DB.messages.forEach(m=>m.readByHQ=true); await saveDB(); renderTabs();
+  const depts=[...new Set(DB.messages.map(m=>m.dept))];
+  const types=[...new Set(DB.messages.map(m=>m.type))];
+  el.innerHTML=`
+  <div class="pageContent">
+    <div class="toolbar">
+      <input type="text" placeholder="🔍 件名・店舗名検索" id="msgSearch" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:12px;width:200px" oninput="renderMsgList()">
+      <div class="filterSelect"><select id="msgDeptF" onchange="renderMsgList()"><option value="">全部署</option>${depts.map(d=>`<option value="${d}">${d}</option>`).join('')}</select></div>
+      <div class="filterSelect"><select id="msgTypeF" onchange="renderMsgList()"><option value="">全種別</option>${types.map(t=>`<option value="${t}">${t}</option>`).join('')}</select></div>
+      <div class="filterSelect"><select id="msgReplyF" onchange="renderMsgList()"><option value="">全て</option><option value="unreplied">未返信</option><option value="replied">返信済</option></select></div>
+    </div>
+    <div style="padding:16px" id="msgList"></div>
+  </div>`;
+  renderMsgList();
+}
+function renderMsgList() {
+  const q=document.getElementById('msgSearch')?.value||'';
+  const df=document.getElementById('msgDeptF')?.value||'';
+  const tf=document.getElementById('msgTypeF')?.value||'';
+  const rf=document.getElementById('msgReplyF')?.value||'';
+  let msgs=DB.messages.filter(m=>
+    (!q||m.subject.includes(q)||m.storeName.includes(q))&&
+    (!df||m.dept===df)&&(!tf||m.type===tf)&&
+    (!rf||(rf==='replied'?!!m.reply:!m.reply))
+  ).sort((a,b)=>b.sentAt.localeCompare(a.sentAt));
+  const el=document.getElementById('msgList');if(!el)return;
+  if(!msgs.length){el.innerHTML='<div class="emptyState"><div class="ei">📭</div><p>メッセージがありません</p></div>';return;}
+  el.innerHTML=msgs.map(m=>`
+    <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:10px;${!m.reply?'border-left:3px solid var(--orange)':'border-left:3px solid var(--green)'}">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+        <span class="tag tag-cat">${m.dept}</span>
+        <span style="font-size:11px;padding:2px 7px;border-radius:4px;background:#f5f5f5;color:var(--gray)">${m.type}</span>
+        <span style="font-weight:600">${m.subject}</span>
+        ${!m.reply?`<span style="font-size:11px;background:#fff3e0;color:var(--orange);padding:2px 7px;border-radius:4px">未返信</span>`:`<span style="font-size:11px;background:var(--green-light);color:var(--green);padding:2px 7px;border-radius:4px">返信済</span>`}
+        <span style="font-size:11px;color:var(--gray);margin-left:auto">${m.storeName} / ${fmt(m.sentAt)}</span>
+      </div>
+      <p style="font-size:13px;white-space:pre-wrap;margin-bottom:10px;color:var(--text2)">${m.body}</p>
+      ${m.reply?`<div style="padding:8px 12px;background:var(--green-light);border-radius:6px;margin-bottom:8px">
+        <p style="font-size:11px;color:var(--green);font-weight:700;margin-bottom:3px">本部返信 — ${fmt(m.repliedAt)}</p>
+        <p style="font-size:12px;white-space:pre-wrap">${m.reply}</p>
+      </div>`:''}
+      <div style="display:flex;gap:6px">
+        <button class="btnOutline" style="font-size:12px" onclick="openReplyModal('${m.id}')">${m.reply?'✏ 返信を編集':'↩ 返信する'}</button>
+        <button class="btnOutline" style="font-size:12px;color:var(--red);border-color:var(--red)" onclick="deleteMsg('${m.id}')">削除</button>
+      </div>
+    </div>`).join('');
+}
+function openReplyModal(msgId) {
+  const m=DB.messages.find(x=>x.id===msgId);if(!m)return;
+  showModal(`<div class="modal">
+    <div class="modalHeader"><span class="modalTitle">↩ 返信 — ${m.subject}</span><button class="closeBtn" onclick="closeModal()">✕</button></div>
+    <div class="modalBody">
+      <div style="background:#f9f9f9;border-radius:8px;padding:12px;margin-bottom:14px">
+        <p style="font-size:11px;color:var(--gray);margin-bottom:4px">📍 ${m.storeName} / ${fmt(m.sentAt)}</p>
+        <p style="font-size:13px;white-space:pre-wrap">${m.body}</p>
+      </div>
+      <div class="mRow"><label>返信内容 *</label>
+        <textarea id="replyBody" rows="5" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:13px;resize:vertical" placeholder="返信内容を入力…">${m.reply||''}</textarea>
+      </div>
+    </div>
+    <div class="mFooter"><button class="btnGray" onclick="closeModal()">キャンセル</button><button class="btnGreen" onclick="doReply('${msgId}')">📤 返信する</button></div>
+  </div>`);
+}
+async function doReply(msgId) {
+  const body=document.getElementById('replyBody').value.trim();
+  if(!body){toast('返信内容を入力してください','error');return;}
+  const m=DB.messages.find(x=>x.id===msgId);
+  m.reply=body; m.repliedAt=new Date().toISOString();
+  await saveDB();closeModal();toast('返信しました','success');
+  renderMsgBoxPage(document.getElementById('pageArea'));
+}
+async function deleteMsg(msgId) {
+  if(!confirm('削除しますか？'))return;
+  DB.messages=DB.messages.filter(m=>m.id!==msgId);
+  await saveDB();toast('削除しました');
+  renderMsgBoxPage(document.getElementById('pageArea'));
+}
+
+// ========== SETTINGS ==========
+let settTab = 0;
+function renderSettingsPage(el) {
+  el.innerHTML = `<div class="settPage">
+    <div class="settTab">
+      ${['店舗管理','部署管理','エリア管理','カテゴリ管理','ユーザー管理','データ管理'].map((t,i)=>
+        `<button class="settTabBtn ${settTab===i?'active':''}" onclick="setSettTab(${i})">${t}</button>`).join('')}
+    </div>
+    <div id="settPanel"></div>
+  </div>`;
+  renderSettPanel();
+}
+function setSettTab(i) { settTab=i; renderSettPanel(); document.querySelectorAll('.settTabBtn').forEach((b,j)=>b.classList.toggle('active',j===i)); }
+function renderSettPanel() {
+  const el = document.getElementById('settPanel');
+  if (!el) return;
+  if (settTab===0) renderStoreSet(el);
+  else if (settTab===1) renderDeptSet(el);
+  else if (settTab===2) renderAreaSet(el);
+  else if (settTab===3) renderCatSet(el);
+  else if (settTab===4) renderUserSet(el);
+  else renderDataSet(el);
+}
+
+// ---- STORE SET (CSV対応) ----
+function renderStoreSet(el) {
+  el.innerHTML=`<div class="settCard">
+    <div class="settCardHead">
+      <span class="settCardTitle">店舗一覧 (${DB.stores.length}件)</span>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btnOutline" style="font-size:12px" onclick="dlStoreTemplate()">📄 CSVテンプレート</button>
+        <label class="btnOutline" style="font-size:12px;cursor:pointer">📤 CSV一括登録<input type="file" accept=".csv" onchange="importStoreCSV(this)" style="display:none"></label>
+        <button class="btnBlue" style="font-size:12px;padding:5px 12px" onclick="openAddStore()">＋ 追加</button>
+      </div>
+    </div>
+    <div style="background:#fff8e1;border:1px solid #ffe082;border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:#795548">
+      📋 CSV形式: <b>コード,店舗名,エリア,PIN</b>（1行目はヘッダーとして読み飛ばします）
+    </div>
+    <div style="overflow-x:auto"><table class="mini" style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr style="border-bottom:2px solid var(--border)"><th>コード</th><th>店舗名</th><th>エリア</th><th>PIN</th><th>操作</th></tr></thead>
+      <tbody>${DB.stores.map(s=>`<tr style="border-bottom:1px solid #f0f0f0">
+        <td style="color:var(--gray)">${s.code}</td><td>${s.name}</td>
+        <td><span class="tag tag-cat">${s.area}</span></td><td>${s.pass||'1234'}</td>
+        <td>
+          <button class="btnOutline" style="font-size:11px;padding:3px 8px" onclick="editStore('${s.code}')">編集</button>
+          <button class="btnOutline" style="font-size:11px;padding:3px 8px;color:var(--red);border-color:var(--red)" onclick="delStore('${s.code}')">削除</button>
+        </td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+  </div>`;
+}
+function dlStoreTemplate() {
+  const csv='\uFEFF'+'コード,店舗名,エリア,PIN\nS013,新店舗名,関東,1234\n';
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='店舗登録テンプレート.csv';a.click();
+}
+async function importStoreCSV(inp) {
+  const f=inp.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=async e=>{
+    const lines=e.target.result.replace(/^\uFEFF/,'').split(/\r?\n/).filter(l=>l.trim());
+    let added=0,skipped=0;
+    lines.forEach((line,i)=>{
+      if(i===0&&line.includes('コード'))return;
+      const [code,name,area,pass]=line.split(',').map(v=>v.trim());
+      if(!code||!name){skipped++;return;}
+      if(DB.stores.find(s=>s.code===code.toUpperCase())){skipped++;return;}
+      DB.stores.push({code:code.toUpperCase(),name,area:area||'',pass:pass||'1234'});
+      added++;
+    });
+    await saveDB();inp.value='';renderSettPanel();initLoginStores();
+    toast(`${added}件追加、${skipped}件スキップ`,'success');
+  };
+  r.readAsText(f,'UTF-8');
+}
+
+// ---- DEPT SET ----
+function renderDeptSet(el) {
+  el.innerHTML=`<div class="settCard">
+    <div class="settCardHead">
+      <span class="settCardTitle">部署一覧 (${DB.departments.length}件)</span>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btnOutline" style="font-size:12px" onclick="dlDeptTemplate()">📄 CSVテンプレート</button>
+        <label class="btnOutline" style="font-size:12px;cursor:pointer">📤 CSV一括登録<input type="file" accept=".csv" onchange="importDeptCSV(this)" style="display:none"></label>
+        <button class="btnBlue" style="font-size:12px;padding:5px 12px" onclick="openAddDept()">＋ 追加</button>
+      </div>
+    </div>
+    <div style="background:#fff8e1;border:1px solid #ffe082;border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:#795548">
+      📋 CSV形式: <b>部署コード,部署名,担当者名</b>（1行目はヘッダーとして読み飛ばします）
+    </div>
+    ${!DB.departments.length?'<div class="emptyState" style="padding:24px"><div class="ei">🏢</div><p>部署が登録されていません</p></div>':`
+    <div style="overflow-x:auto"><table class="mini" style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr style="border-bottom:2px solid var(--border)"><th>コード</th><th>部署名</th><th>担当者</th><th>操作</th></tr></thead>
+      <tbody>${DB.departments.map(d=>`<tr style="border-bottom:1px solid #f0f0f0">
+        <td style="color:var(--gray)">${d.code}</td><td style="font-weight:600">${d.name}</td><td style="color:var(--text2)">${d.manager||'—'}</td>
+        <td>
+          <button class="btnOutline" style="font-size:11px;padding:3px 8px" onclick="editDept('${d.code}')">編集</button>
+          <button class="btnOutline" style="font-size:11px;padding:3px 8px;color:var(--red);border-color:var(--red)" onclick="delDept('${d.code}')">削除</button>
+        </td>
+      </tr>`).join('')}</tbody>
+    </table></div>`}
+  </div>`;
+}
+function dlDeptTemplate() {
+  const csv='\uFEFF'+'部署コード,部署名,担当者名\nD001,営業本部,田中 一郎\nD002,商品部,鈴木 花子\n';
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='部署登録テンプレート.csv';a.click();
+}
+async function importDeptCSV(inp) {
+  const f=inp.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=async e=>{
+    const lines=e.target.result.replace(/^\uFEFF/,'').split(/\r?\n/).filter(l=>l.trim());
+    let added=0,skipped=0;
+    lines.forEach((line,i)=>{
+      if(i===0&&line.includes('コード'))return;
+      const [code,name,manager]=line.split(',').map(v=>v.trim());
+      if(!code||!name){skipped++;return;}
+      if(DB.departments.find(d=>d.code===code)){skipped++;return;}
+      DB.departments.push({code,name,manager:manager||''});
+      added++;
+    });
+    await saveDB();inp.value='';renderSettPanel();
+    toast(`${added}件追加、${skipped}件スキップ`,'success');
+  };
+  r.readAsText(f,'UTF-8');
+}
+function openAddDept() {
+  showModal(`<div class="modal"><div class="modalHeader"><span class="modalTitle">部署追加</span><button class="closeBtn" onclick="closeModal()">✕</button></div>
+    <div class="modalBody">
+      <div class="mRow"><label>部署コード</label><input type="text" id="dc" placeholder="例: D001"></div>
+      <div class="mRow"><label>部署名 *</label><input type="text" id="dn" placeholder="例: 営業本部"></div>
+      <div class="mRow"><label>担当者名</label><input type="text" id="dm" placeholder="例: 田中 一郎"></div>
+    </div>
+    <div class="mFooter"><button class="btnGray" onclick="closeModal()">キャンセル</button><button class="btnBlue" onclick="doAddDept()">追加</button></div></div>`);
+}
+async function doAddDept() {
+  const code=document.getElementById('dc').value.trim()||('D'+String(DB.departments.length+1).padStart(3,'0'));
+  const name=document.getElementById('dn').value.trim();
+  if(!name){toast('部署名は必須','error');return;}
+  if(DB.departments.find(d=>d.code===code)){toast('コード重複','error');return;}
+  DB.departments.push({code,name,manager:document.getElementById('dm').value.trim()});
+  await saveDB();closeModal();renderSettPanel();toast('部署を追加しました','success');
+}
+function editDept(code) {
+  const d=DB.departments.find(x=>x.code===code);
+  showModal(`<div class="modal"><div class="modalHeader"><span class="modalTitle">部署編集</span><button class="closeBtn" onclick="closeModal()">✕</button></div>
+    <div class="modalBody">
+      <div class="mRow"><label>部署名</label><input type="text" id="edn" value="${d.name}"></div>
+      <div class="mRow"><label>担当者名</label><input type="text" id="edm" value="${d.manager||''}"></div>
+    </div>
+    <div class="mFooter"><button class="btnGray" onclick="closeModal()">キャンセル</button><button class="btnBlue" onclick="doEditDept('${code}')">保存</button></div></div>`);
+}
+async function doEditDept(code) {
+  const d=DB.departments.find(x=>x.code===code);
+  d.name=document.getElementById('edn').value.trim()||d.name;
+  d.manager=document.getElementById('edm').value.trim();
+  await saveDB();closeModal();renderSettPanel();toast('更新しました','success');
+}
+async function delDept(code) {
+  if(!confirm('削除しますか？'))return;
+  DB.departments=DB.departments.filter(d=>d.code!==code);
+  await saveDB();renderSettPanel();toast('削除しました');
+}
+function openAddStore() {
+  const ao = DB.areas.map(a=>`<option value="${a}">${a}</option>`).join('');
+  showModal(`<div class="modal"><div class="modalHeader"><span class="modalTitle">店舗追加</span><button class="closeBtn" onclick="closeModal()">✕</button></div>
+    <div class="modalBody">
+      <div class="mRow"><label>コード</label><input type="text" id="sc" placeholder="例: S013"></div>
+      <div class="mRow"><label>店舗名</label><input type="text" id="sn" placeholder="例: 博多店"></div>
+      <div class="mRow"><label>エリア</label><select id="sa">${ao}</select></div>
+      <div class="mRow"><label>PIN</label><input type="text" id="sp" value="1234"></div>
+    </div>
+    <div class="mFooter"><button class="btnGray" onclick="closeModal()">キャンセル</button><button class="btnBlue" onclick="doAddStore()">追加</button></div></div>`);
+}
+async function doAddStore() {
+  const code=document.getElementById('sc').value.trim().toUpperCase(), name=document.getElementById('sn').value.trim();
+  if (!code||!name){toast('コードと名前は必須','error');return;}
+  if (DB.stores.find(s=>s.code===code)){toast('コード重複','error');return;}
+  DB.stores.push({code,name,area:document.getElementById('sa').value,pass:document.getElementById('sp').value||'1234'});
+  await saveDB();closeModal();renderSettPanel();initLoginStores();toast('追加しました','success');
+}
+function editStore(code) {
+  const s=DB.stores.find(x=>x.code===code);
+  const ao=DB.areas.map(a=>`<option value="${a}" ${a===s.area?'selected':''}>${a}</option>`).join('');
+  showModal(`<div class="modal"><div class="modalHeader"><span class="modalTitle">店舗編集</span><button class="closeBtn" onclick="closeModal()">✕</button></div>
+    <div class="modalBody">
+      <div class="mRow"><label>店舗名</label><input type="text" id="en" value="${s.name}"></div>
+      <div class="mRow"><label>エリア</label><select id="ea">${ao}</select></div>
+      <div class="mRow"><label>PIN</label><input type="text" id="ep" value="${s.pass||'1234'}"></div>
+    </div>
+    <div class="mFooter"><button class="btnGray" onclick="closeModal()">キャンセル</button><button class="btnBlue" onclick="doEditStore('${code}')">保存</button></div></div>`);
+}
+async function doEditStore(code) {
+  const s=DB.stores.find(x=>x.code===code);
+  s.name=document.getElementById('en').value.trim()||s.name;
+  s.area=document.getElementById('ea').value;
+  s.pass=document.getElementById('ep').value||'1234';
+  await saveDB();closeModal();renderSettPanel();initLoginStores();toast('更新しました','success');
+}
+async function delStore(code) {
+  if(!confirm('削除しますか？'))return;
+  DB.stores=DB.stores.filter(s=>s.code!==code);
+  await saveDB();renderSettPanel();initLoginStores();toast('削除しました');
+}
+function renderAreaSet(el) {
+  el.innerHTML=`<div class="settCard">
+    <div class="settCardHead"><span class="settCardTitle">エリア一覧</span></div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
+      <input type="text" id="naInput" placeholder="新しいエリア名" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px">
+      <button class="btnBlue" style="font-size:12px;padding:6px 12px" onclick="addArea()">追加</button>
+    </div>
+    <div class="chipGroup">${DB.areas.map(a=>`<div class="chip">${a}<span onclick="removeArea('${a}')">✕</span></div>`).join('')}</div>
+  </div>`;
+}
+async function addArea(){const v=document.getElementById('naInput').value.trim();if(!v||DB.areas.includes(v))return;DB.areas.push(v);await saveDB();renderSettPanel();}
+async function removeArea(a){if(DB.stores.some(s=>s.area===a)){toast('所属店舗があります','error');return;}DB.areas=DB.areas.filter(x=>x!==a);await saveDB();renderSettPanel();}
+function renderCatSet(el) {
+  el.innerHTML=`<div class="settCard">
+    <div class="settCardHead"><span class="settCardTitle">カテゴリ一覧</span></div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
+      <input type="text" id="ncInput" placeholder="新しいカテゴリ" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px">
+      <button class="btnBlue" style="font-size:12px;padding:6px 12px" onclick="addCat()">追加</button>
+    </div>
+    <div class="chipGroup">${DB.categories.map(c=>`<div class="chip">${c}<span onclick="removeCat('${c}')">✕</span></div>`).join('')}</div>
+  </div>`;
+}
+async function addCat(){const v=document.getElementById('ncInput').value.trim();if(!v||DB.categories.includes(v))return;DB.categories.push(v);await saveDB();renderSettPanel();}
+async function removeCat(c){DB.categories=DB.categories.filter(x=>x!==c);await saveDB();renderSettPanel();}
+function renderUserSet(el) {
+  el.innerHTML=`<div class="settCard">
+    <div class="settCardHead"><span class="settCardTitle">本部ユーザー（管理者）</span><button class="btnBlue" style="font-size:12px;padding:5px 12px" onclick="openAddUser()">＋ 追加</button></div>
+    <table class="mini" style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr style="border-bottom:2px solid var(--border)"><th>ID</th><th>名前</th><th>操作</th></tr></thead>
+      <tbody>${DB.users.filter(u=>u.role==='hq').map(u=>`<tr style="border-bottom:1px solid #f0f0f0">
+        <td>${u.id}</td><td>${u.name}</td>
+        <td><button class="btnOutline" style="font-size:11px;padding:3px 8px;color:var(--red);border-color:var(--red)" onclick="delUser('${u.id}')">削除</button></td>
+      </tr>`).join('')}</tbody>
+    </table>
+  </div>
+  <div class="settCard" style="margin-top:12px">
+    <div class="settCardHead">
+      <span class="settCardTitle">本部スタッフ（所属長・担当者） <span style="font-size:11px;color:var(--gray);font-weight:400">${DB.hqStaff.length}名</span></span>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btnOutline" style="font-size:12px" onclick="dlStaffTemplate()">📄 CSVテンプレート</button>
+        <label class="btnOutline" style="font-size:12px;cursor:pointer">📤 CSV一括登録<input type="file" accept=".csv" onchange="importStaffCSV(this)" style="display:none"></label>
+        <button class="btnBlue" style="font-size:12px;padding:5px 12px" onclick="openAddStaff()">＋ 追加</button>
+      </div>
+    </div>
+    <div style="background:#fff8e1;border:1px solid #ffe082;border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:#795548">
+      📋 CSV形式: <b>ID, 氏名, パスワード, 種別(manager/staff), 部署名, 所属長ID</b>（1行目はヘッダーとして読み飛ばします）<br>
+      ※ manager=所属長（承認権限あり）/ staff=担当者（申請者）/ 所属長IDはstaffのみ有効
+    </div>
+    ${!DB.hqStaff.length ? '<div class="emptyState" style="padding:20px"><div class="ei">👤</div><p>スタッフが登録されていません</p></div>' : `
+    <div style="overflow-x:auto"><table class="mini" style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr style="border-bottom:2px solid var(--border)"><th>ID</th><th>氏名</th><th>種別</th><th>所属長</th><th>部署</th><th>操作</th></tr></thead>
+      <tbody>${DB.hqStaff.map(s=>`<tr style="border-bottom:1px solid #f0f0f0">
+        <td style="color:var(--gray)">${s.id}</td>
+        <td style="font-weight:600">${s.name}</td>
+        <td>${s.staffRole==='manager'
+          ? '<span style="font-size:11px;padding:2px 8px;border-radius:4px;background:#e8f5e9;color:var(--green);font-weight:700">👑 所属長</span>'
+          : '<span style="font-size:11px;padding:2px 8px;border-radius:4px;background:var(--blue-light);color:var(--blue);font-weight:700">👤 担当者</span>'}</td>
+        <td style="color:var(--text2);font-size:12px">${s.staffRole==='staff'?(s.managerName||'<span style="color:var(--orange)">未設定</span>'):'—'}</td>
+        <td style="color:var(--text2)">${s.department||'—'}</td>
+        <td>
+          <button class="btnOutline" style="font-size:11px;padding:3px 8px" onclick="editStaff('${s.id}')">編集</button>
+          <button class="btnOutline" style="font-size:11px;padding:3px 8px;color:var(--red);border-color:var(--red)" onclick="delStaff('${s.id}')">削除</button>
+        </td>
+      </tr>`).join('')}</tbody>
+    </table></div>`}
+  </div>
+  <div class="settCard" style="margin-top:12px">
+    <div class="settCardHead"><span class="settCardTitle">ワークフロー設定</span></div>
+    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:8px 0">
+      <input type="checkbox" ${DB.workflowEnabled?'checked':''} onchange="DB.workflowEnabled=this.checked;saveDB().then(()=>toast(this.checked?'ワークフローを有効化しました':'ワークフローを無効化しました'))" style="width:16px;height:16px;accent-color:var(--blue)">
+      <span style="font-size:13px">承認ワークフローを有効にする</span>
+      <span style="font-size:11px;color:var(--gray)">（スタッフがONの場合、担当者が文書送信時に所属長の承認を経由します）</span>
+    </label>
+  </div>`;
+}
+function dlStaffTemplate() {
+  const csv='\uFEFF'+'ID,氏名,パスワード,種別(manager/staff),部署名,所属長ID\nhq_m01,田中 部長,1234,manager,営業本部,\nhq_s01,鈴木 太郎,1234,staff,営業本部,hq_m01\n';
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='スタッフ登録テンプレート.csv';a.click();
+}
+async function importStaffCSV(inp) {
+  const f=inp.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=async e=>{
+    const lines=e.target.result.replace(/^\uFEFF/,'').split(/\r?\n/).filter(l=>l.trim());
+    let added=0,skipped=0;
+    lines.forEach((line,i)=>{
+      if(i===0&&(line.includes('ID')||line.includes('氏名')))return;
+      const [id,name,pass,role,dept,managerId]=line.split(',').map(v=>v.trim());
+      if(!id||!name){skipped++;return;}
+      if(DB.hqStaff.find(s=>s.id===id)||DB.users.find(u=>u.id===id)){skipped++;return;}
+      const staffRole=(role==='manager')?'manager':'staff';
+      const mgr = managerId ? DB.hqStaff.find(s=>s.id===managerId) : null;
+      DB.hqStaff.push({id,name,pass:pass||'1234',staffRole,department:dept||'',
+        managerId:staffRole==='staff'?(managerId||''):'',
+        managerName:staffRole==='staff'?(mgr?.name||''):'',
+        role:'hq'});
+      added++;
+    });
+    await saveDB();inp.value='';renderSettPanel();
+    toast(`${added}名追加、${skipped}名スキップ`,'success');
+  };
+  r.readAsText(f,'UTF-8');
+}
+// ロール切替で「所属長選択」行を表示/非表示
+function onStaffRoleChange(selectEl, managerRowId) {
+  const row = document.getElementById(managerRowId);
+  if (row) row.style.display = selectEl.value === 'staff' ? '' : 'none';
+}
+
+function openAddStaff() {
+  const deptOpts = DB.departments.map(d=>`<option value="${d.name}">${d.name}</option>`).join('');
+  const managerOpts = DB.hqStaff.filter(s=>s.staffRole==='manager')
+    .map(m=>`<option value="${m.id}">${m.name}（${m.department||'部署未設定'}）</option>`).join('');
+  showModal(`<div class="modal">
+    <div class="modalHeader">
+      <span class="modalTitle">スタッフ追加</span>
+      <button class="closeBtn" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modalBody">
+      <div class="mRow"><label>ID *</label><input type="text" id="stId" placeholder="例: hq_s01"></div>
+      <div class="mRow"><label>氏名 *</label><input type="text" id="stName" placeholder="例: 田中 太郎"></div>
+      <div class="mRow"><label>パスワード</label><input type="password" id="stPass" value="1234"></div>
+      <div class="mRow">
+        <label>種別 *</label>
+        <div style="display:flex;gap:8px;margin-top:2px">
+          <label style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 12px;border:2px solid var(--border);border-radius:8px;cursor:pointer;transition:border-color .15s" id="roleCard_manager">
+            <input type="radio" name="stRoleRadio" value="manager" id="stRoleManager"
+              onchange="onStaffRoleChange(this,'stManagerRow');document.getElementById('roleCard_manager').style.borderColor='var(--green)';document.getElementById('roleCard_staff').style.borderColor='var(--border)'">
+            <div>
+              <div style="font-weight:700;font-size:13px;color:var(--green)">👑 所属長</div>
+              <div style="font-size:11px;color:var(--gray)">文書の承認権限あり</div>
+            </div>
+          </label>
+          <label style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 12px;border:2px solid var(--blue);border-radius:8px;cursor:pointer;transition:border-color .15s" id="roleCard_staff">
+            <input type="radio" name="stRoleRadio" value="staff" id="stRoleStaff" checked
+              onchange="onStaffRoleChange(this,'stManagerRow');document.getElementById('roleCard_staff').style.borderColor='var(--blue)';document.getElementById('roleCard_manager').style.borderColor='var(--border)'">
+            <div>
+              <div style="font-weight:700;font-size:13px;color:var(--blue)">👤 担当者</div>
+              <div style="font-size:11px;color:var(--gray)">承認申請を行う</div>
+            </div>
+          </label>
+        </div>
+      </div>
+      <div class="mRow" id="stManagerRow">
+        <label>所属長 <span style="font-size:10px;color:var(--red)">※担当者に必須</span></label>
+        <select id="stManagerId" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:13px">
+          <option value="">所属長を選択（任意）</option>${managerOpts}
+        </select>
+        ${!managerOpts ? '<p style="font-size:11px;color:var(--orange);margin-top:4px">⚠ 所属長が未登録です。先に所属長を追加してください。</p>' : ''}
+      </div>
+      <div class="mRow">
+        <label>部署</label>
+        <select id="stDept" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:13px">
+          <option value="">部署なし</option>${deptOpts}
+        </select>
+      </div>
+    </div>
+    <div class="mFooter">
+      <button class="btnGray" onclick="closeModal()">キャンセル</button>
+      <button class="btnBlue" onclick="doAddStaff()">追加</button>
+    </div>
+  </div>`);
+}
+
+async function doAddStaff() {
+  const id = document.getElementById('stId').value.trim();
+  const name = document.getElementById('stName').value.trim();
+  if (!id || !name) { toast('IDと氏名は必須です','error'); return; }
+  if (DB.hqStaff.find(s=>s.id===id) || DB.users.find(u=>u.id===id)) { toast('このIDはすでに使用されています','error'); return; }
+  const staffRole = document.querySelector('input[name="stRoleRadio"]:checked')?.value || 'staff';
+  const managerId = document.getElementById('stManagerId')?.value || '';
+  const manager = DB.hqStaff.find(s=>s.id===managerId);
+  DB.hqStaff.push({
+    id, name,
+    pass: document.getElementById('stPass').value || '1234',
+    staffRole,
+    department: document.getElementById('stDept').value,
+    managerId: staffRole==='staff' ? managerId : '',
+    managerName: staffRole==='staff' ? (manager?.name||'') : '',
+    role: 'hq',
+  });
+  await saveDB(); closeModal(); renderSettPanel();
+  toast(`${staffRole==='manager'?'所属長':'担当者'}「${name}」を追加しました`,'success');
+}
+
+function editStaff(id) {
+  const s = DB.hqStaff.find(x=>x.id===id);
+  const deptOpts = DB.departments.map(d=>`<option value="${d.name}" ${d.name===s.department?'selected':''}>${d.name}</option>`).join('');
+  const managerOpts = DB.hqStaff.filter(x=>x.staffRole==='manager' && x.id!==id)
+    .map(m=>`<option value="${m.id}" ${m.id===s.managerId?'selected':''}>${m.name}（${m.department||'部署未設定'}）</option>`).join('');
+  const isStaff = s.staffRole === 'staff';
+  showModal(`<div class="modal">
+    <div class="modalHeader">
+      <span class="modalTitle">スタッフ編集 — ${s.name}</span>
+      <button class="closeBtn" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modalBody">
+      <div style="background:${isStaff?'var(--blue-light)':'var(--green-light)'};border-radius:6px;padding:8px 12px;margin-bottom:12px;font-size:12px;font-weight:700;color:${isStaff?'var(--blue)':'var(--green)'}">
+        ${isStaff?'👤 担当者':'👑 所属長'}
+      </div>
+      <div class="mRow"><label>氏名</label><input type="text" id="esName" value="${s.name}"></div>
+      <div class="mRow"><label>パスワード</label><input type="password" id="esPass" value="${s.pass||'1234'}"></div>
+      <div class="mRow">
+        <label>種別</label>
+        <div style="display:flex;gap:8px;margin-top:2px">
+          <label style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 12px;border:2px solid ${!isStaff?'var(--green)':'var(--border)'};border-radius:8px;cursor:pointer" id="esRoleCard_manager">
+            <input type="radio" name="esRoleRadio" value="manager" ${!isStaff?'checked':''}
+              onchange="onStaffRoleChange(this,'esManagerRow');document.getElementById('esRoleCard_manager').style.borderColor='var(--green)';document.getElementById('esRoleCard_staff').style.borderColor='var(--border)'">
+            <div><div style="font-weight:700;font-size:13px;color:var(--green)">👑 所属長</div><div style="font-size:11px;color:var(--gray)">承認権限あり</div></div>
+          </label>
+          <label style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 12px;border:2px solid ${isStaff?'var(--blue)':'var(--border)'};border-radius:8px;cursor:pointer" id="esRoleCard_staff">
+            <input type="radio" name="esRoleRadio" value="staff" ${isStaff?'checked':''}
+              onchange="onStaffRoleChange(this,'esManagerRow');document.getElementById('esRoleCard_staff').style.borderColor='var(--blue)';document.getElementById('esRoleCard_manager').style.borderColor='var(--border)'">
+            <div><div style="font-weight:700;font-size:13px;color:var(--blue)">👤 担当者</div><div style="font-size:11px;color:var(--gray)">承認申請を行う</div></div>
+          </label>
+        </div>
+      </div>
+      <div class="mRow" id="esManagerRow" style="display:${isStaff?'':'none'}">
+        <label>所属長</label>
+        <select id="esManagerId" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:13px">
+          <option value="">所属長を選択（任意）</option>${managerOpts}
+        </select>
+      </div>
+      <div class="mRow">
+        <label>部署</label>
+        <select id="esDept" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:13px">
+          <option value="">部署なし</option>${deptOpts}
+        </select>
+      </div>
+    </div>
+    <div class="mFooter">
+      <button class="btnGray" onclick="closeModal()">キャンセル</button>
+      <button class="btnBlue" onclick="doEditStaff('${id}')">保存</button>
+    </div>
+  </div>`);
+}
+
+async function doEditStaff(id) {
+  const s = DB.hqStaff.find(x=>x.id===id);
+  s.name = document.getElementById('esName').value.trim() || s.name;
+  s.pass = document.getElementById('esPass').value || s.pass;
+  s.staffRole = document.querySelector('input[name="esRoleRadio"]:checked')?.value || s.staffRole;
+  s.department = document.getElementById('esDept').value;
+  if (s.staffRole === 'staff') {
+    const mid = document.getElementById('esManagerId')?.value || '';
+    const mgr = DB.hqStaff.find(x=>x.id===mid);
+    s.managerId = mid;
+    s.managerName = mgr?.name || '';
+  } else {
+    s.managerId = '';
+    s.managerName = '';
+  }
+  await saveDB(); closeModal(); renderSettPanel(); toast('更新しました','success');
+}
+async function delStaff(id) {
+  if(!confirm('このスタッフを削除しますか？'))return;
+  DB.hqStaff=DB.hqStaff.filter(s=>s.id!==id);
+  await saveDB();renderSettPanel();toast('削除しました');
+}
+function openAddUser(){
+  showModal(`<div class="modal"><div class="modalHeader"><span class="modalTitle">ユーザー追加</span><button class="closeBtn" onclick="closeModal()">✕</button></div>
+    <div class="modalBody">
+      <div class="mRow"><label>ID</label><input type="text" id="uid"></div>
+      <div class="mRow"><label>名前</label><input type="text" id="uname"></div>
+      <div class="mRow"><label>パスワード</label><input type="password" id="upass" value="1234"></div>
+    </div>
+    <div class="mFooter"><button class="btnGray" onclick="closeModal()">キャンセル</button><button class="btnBlue" onclick="doAddUser()">追加</button></div></div>`);
+}
+async function doAddUser(){
+  const id=document.getElementById('uid').value.trim(),name=document.getElementById('uname').value.trim(),pass=document.getElementById('upass').value;
+  if(!id||!name){toast('ID・名前は必須','error');return;}
+  if(DB.users.find(u=>u.id===id)){toast('ID重複','error');return;}
+  DB.users.push({id,name,pass,role:'hq'});await saveDB();closeModal();renderSettPanel();toast('追加しました','success');
+}
+async function delUser(id){if(id==='admin'){toast('adminは削除不可','error');return;}if(!confirm('削除しますか？'))return;DB.users=DB.users.filter(u=>u.id!==id);await saveDB();renderSettPanel();}
+function renderDataSet(el) {
+  el.innerHTML=`<div class="settCard">
+    <div class="settCardHead"><span class="settCardTitle">データ管理</span></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btnOutline" onclick="exportData()">📥 エクスポート</button>
+      <label class="btnOutline" style="cursor:pointer">📤 インポート<input type="file" accept=".json" onchange="importData(this)" style="display:none"></label>
+      <button class="btnOutline" style="color:var(--red);border-color:var(--red)" onclick="clearData()">🗑 初期化</button>
+    </div>
+    <p style="font-size:11px;color:var(--gray);margin-top:10px">文書: ${DB.docs.length}件 / 報告: ${DB.reports.length}件 / 店舗: ${DB.stores.length}件</p>
+  </div>`;
+}
+function exportData(){const b=new Blob([JSON.stringify(DB,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`hanbancho_${new Date().toISOString().slice(0,10)}.json`;a.click();}
+async function importData(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=async e=>{try{if(!confirm('上書きしますか？'))return;const d=JSON.parse(e.target.result);['docs','reports','stores','areas','categories','users','nextId','hqStaff','docDrafts','templates','reminders','departments','nextMsgId','nextDraftId','nextTplId','workflowEnabled'].forEach(k=>{if(d[k]!==undefined)DB[k]=d[k];});await saveDB();toast('インポートしました','success');goTab('list');}catch(e){toast('ファイル形式エラー','error');}};r.readAsText(f);}
+async function clearData(){if(!confirm('全データを初期化しますか？'))return;DB.docs=[];DB.reports=[];DB.nextId=1;await saveDB();toast('初期化しました');goTab('list');}
+
+// ========== UTILS ==========
+function showModal(html){const ov=document.getElementById('ov');ov.innerHTML=html;ov.style.display='flex';}
+function closeModal(){document.getElementById('ov').style.display='none';}
+function ovClick(e){if(e.target===document.getElementById('ov'))closeModal();}
+function toast(msg,type=''){const t=document.createElement('div');t.className='toast '+(type==='success'?'success':type==='error'?'error':'');t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),3000);}
+function dlFile(data,name){const a=document.createElement('a');a.href=data;a.download=name;a.click();}
+function showPhoto(src){showModal(`<div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:20px"><img src="${src}" style="max-width:80vw;max-height:80vh;border-radius:8px"><button class="btnGray" onclick="closeModal()">閉じる</button></div>`);}
+
+// ========== INIT ==========
+(async () => {
+  // ローディングオーバーレイを表示
+  const loader = document.createElement('div');
+  loader.id = 'initLoader';
+  loader.style.cssText = [
+    'position:fixed', 'inset:0', 'background:#fff',
+    'display:flex', 'flex-direction:column',
+    'align-items:center', 'justify-content:center',
+    'z-index:9999', 'gap:16px',
+    'font-family:\'Noto Sans JP\',sans-serif'
+  ].join(';');
+  loader.innerHTML = `
+    <div style="font-size:32px">✔</div>
+    <div style="font-size:16px;font-weight:700;color:#1565C0;letter-spacing:1px">スマートリンク</div>
+    <div style="font-size:13px;color:#757575">データを読み込んでいます...</div>
+    <div style="width:200px;height:4px;background:#e0e0e0;border-radius:2px;overflow:hidden">
+      <div style="height:100%;background:#1565C0;border-radius:2px;animation:ldbar 1.4s ease-in-out infinite"></div>
+    </div>
+    <style>@keyframes ldbar{0%{width:0%;margin-left:0}50%{width:70%;margin-left:15%}100%{width:0%;margin-left:100%}}</style>
+  `;
+  document.body.appendChild(loader);
+
+  await loadDB();
+
+  loader.remove();
+  initLoginStores();
+})();
+</script>
+</body>
+</html>
