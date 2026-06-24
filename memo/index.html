@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>リアルタイムメモ共有（Supabase版）</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  html, body {
+    margin: 0; padding: 0; width: 100%;
+    font-family: -apple-system, 'Hiragino Sans', 'Meiryo', sans-serif;
+    background: #eef1f5;
+    color: #222;
+  }
+  * { box-sizing: border-box; }
+
+  /* ===== ログイン画面 ===== */
+  #login-wrap {
+    display: flex; justify-content: center; align-items: center;
+    min-height: 100vh; padding: 16px;
+  }
+  #login-box {
+    background: #fff; border-radius: 14px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.08);
+    padding: 36px 28px; width: 100%; max-width: 360px;
+    text-align: center;
+  }
+  #login-box h1 { font-size: 18px; margin: 0 0 6px; }
+  #login-box p { font-size: 13px; color: #777; margin: 0 0 24px; }
+  #login-box input {
+    width: 100%; padding: 12px 14px; font-size: 16px;
+    border: 1px solid #dde1e6; border-radius: 8px; margin-bottom: 12px;
+  }
+  #login-box button {
+    width: 100%; padding: 12px; font-size: 15px; font-weight: 600;
+    background: #2f6fed; color: #fff; border: none; border-radius: 8px;
+    cursor: pointer;
+  }
+  #login-box button:active { background: #2459c4; }
+  #login-error { color: #d6334c; font-size: 13px; margin-top: 8px; min-height: 16px; }
+  #conn-status {
+    font-size: 11px; color: #aab1ba; margin-top: 16px;
+  }
+  #conn-status.ok { color: #3a9d5c; }
+  #conn-status.err { color: #d6334c; }
+
+  /* ===== メイン画面 ===== */
+  #app-wrap { display: none; min-height: 100vh; flex-direction: column; }
+  #hdr {
+    background: #2f6fed; color: #fff; padding: 12px 16px;
+    display: flex; justify-content: space-between; align-items: center;
+    position: sticky; top: 0; z-index: 10;
+  }
+  #hdr span.title { font-size: 15px; font-weight: 600; }
+  #hdr button {
+    background: rgba(255,255,255,.15); color: #fff; border: none;
+    border-radius: 6px; padding: 6px 10px; font-size: 12px; cursor: pointer;
+  }
+
+  #feed {
+    flex: 1; padding: 14px 12px 100px;
+    display: flex; flex-direction: column; gap: 10px;
+    max-width: 640px; margin: 0 auto; width: 100%;
+  }
+
+  .memo-card {
+    background: #fff; border-radius: 12px; padding: 12px 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    position: relative;
+  }
+  .memo-meta {
+    font-size: 11px; color: #9aa1ac; margin-bottom: 6px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .memo-device {
+    background: #eef1f5; border-radius: 4px; padding: 2px 7px;
+    font-size: 11px; color: #5b6472;
+  }
+  .memo-text {
+    font-size: 15px; line-height: 1.55; white-space: pre-wrap; word-break: break-word;
+  }
+  .memo-img {
+    margin-top: 8px; max-width: 100%; border-radius: 8px; display: block;
+    cursor: pointer;
+  }
+  .memo-file {
+    margin-top: 8px; display: flex; align-items: center; gap: 8px;
+    background: #f4f6f9; border: 1px solid #e4e7eb; border-radius: 8px;
+    padding: 8px 12px; text-decoration: none; color: #2f6fed;
+    max-width: 100%;
+  }
+  .memo-file .ficon { font-size: 20px; flex-shrink: 0; }
+  .memo-file .fmeta { overflow: hidden; }
+  .memo-file .fname {
+    font-size: 13px; font-weight: 600; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap; display: block;
+  }
+  .memo-file .fhint { font-size: 11px; color: #9aa1ac; }
+  .memo-del {
+    position: absolute; top: 8px; right: 8px;
+    background: none; border: none; color: #c7cbd1; font-size: 16px;
+    cursor: pointer; padding: 4px 6px; border-radius: 6px;
+  }
+  .memo-del:active { color: #d6334c; }
+
+  #empty-state {
+    text-align: center; color: #aab1ba; font-size: 13px; padding: 60px 20px;
+  }
+
+  /* ===== 入力バー（下部固定） ===== */
+  #composer {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: #fff; border-top: 1px solid #e4e7eb;
+    padding: 10px 12px; padding-bottom: calc(10px + env(safe-area-inset-bottom));
+  }
+  #composer-inner {
+    max-width: 640px; margin: 0 auto;
+    display: flex; align-items: flex-end; gap: 8px;
+  }
+  #file-preview-wrap {
+    display: none; max-width: 640px; margin: 0 auto 8px;
+    align-items: center; gap: 8px;
+  }
+  #img-preview { max-height: 60px; border-radius: 6px; }
+  #file-preview-chip {
+    display: flex; align-items: center; gap: 6px;
+    background: #eef1f5; border-radius: 8px; padding: 6px 10px;
+    font-size: 12px; color: #3a4250; max-width: 260px;
+  }
+  #file-preview-chip .fname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #file-preview-remove {
+    background: #eef1f5; border: none; border-radius: 6px;
+    padding: 4px 8px; font-size: 12px; cursor: pointer; color: #5b6472;
+  }
+  #btn-file {
+    background: #eef1f5; border: none; border-radius: 50%;
+    width: 40px; height: 40px; font-size: 18px; flex-shrink: 0; cursor: pointer;
+  }
+  #txt-input {
+    flex: 1; border: 1px solid #dde1e6; border-radius: 18px;
+    padding: 10px 14px; font-size: 15px; resize: none;
+    max-height: 100px; line-height: 1.4; font-family: inherit;
+  }
+  #btn-send {
+    background: #2f6fed; color: #fff; border: none; border-radius: 50%;
+    width: 40px; height: 40px; font-size: 16px; flex-shrink: 0; cursor: pointer;
+  }
+  #btn-send:disabled { background: #c7cbd1; }
+
+  #toast {
+    position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+    background: rgba(30,30,30,.9); color: #fff; padding: 8px 16px;
+    border-radius: 20px; font-size: 13px; z-index: 100; display: none;
+  }
+
+  /* 画像拡大表示用 */
+  #img-modal {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.85);
+    z-index: 200; align-items: center; justify-content: center; padding: 20px;
+  }
+  #img-modal img { max-width: 100%; max-height: 100%; border-radius: 6px; }
+</style>
+</head>
+<body>
+
+<!-- ログイン画面 -->
+<div id="login-wrap">
+  <div id="login-box">
+    <h1>📝 リアルタイムメモ共有</h1>
+    <p>スマホとPCで同じパスワードを入力してください</p>
+    <input id="pw-input" type="password" placeholder="パスワード" inputmode="text">
+    <input id="device-input" type="text" placeholder="このデバイスの名前（例：スマホ／PC）">
+    <button onclick="doLogin()">入る</button>
+    <div id="login-error"></div>
+    <div id="conn-status">Supabaseに接続中...</div>
+  </div>
+</div>
+
+<!-- メイン画面 -->
+<div id="app-wrap">
+  <div id="hdr">
+    <span class="title">📝 メモ共有<span id="device-label"></span></span>
+    <button onclick="doLogout()">ログアウト</button>
+  </div>
+
+  <div id="feed">
+    <div id="empty-state">まだメモがありません。下の入力欄から最初のメモを送ってみましょう。</div>
+  </div>
+
+  <div id="composer">
+    <div id="file-preview-wrap">
+      <img id="img-preview" src="" style="display:none">
+      <div id="file-preview-chip" style="display:none">
+        <span class="ficon">📄</span>
+        <span class="fname"></span>
+      </div>
+      <button id="file-preview-remove" onclick="removeFile()">外す</button>
+    </div>
+    <div id="composer-inner">
+      <button id="btn-file" onclick="document.getElementById('file-input').click()">📎</button>
+      <input type="file" id="file-input" style="display:none" onchange="onFileSelected(event)">
+      <textarea id="txt-input" rows="1" placeholder="メモを入力..." oninput="autoGrow(this)"></textarea>
+      <button id="btn-send" onclick="sendMemo()">➤</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<div id="img-modal" onclick="closeImgModal()">
+  <img id="img-modal-img" src="">
+</div>
+
+<script>
+// ============================================================
+// Supabase接続設定
+// ※ デプロイ前に以下2つを実際の値に書き換えてください
+//   取得場所: Supabase管理画面 → Settings → API
+// ============================================================
+const SUPABASE_URL = 'https://tmisyqsnxmjunfuqapg.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRtaXN5c3FzbnhtanVuZnVxYXBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDYzODMsImV4cCI6MjA5NTYyMjM4M30.VhhvVXJyfbooo_VIudqV_mCEC0FctjV9_6r-925eP9Q';
+const APP_PASS = 'memo2026'; // 簡易パスワード（必要に応じて変更）
+const STORAGE_BUCKET = 'rtm-attachments';
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let PW = null;
+let DEVICE = '';
+let PENDING_FILE = null; // { file, base64, mime, name, size }
+let IS_SENDING = false;
+let REALTIME_CHANNEL = null;
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, 2200);
+}
+
+// ===== 起動時：Supabase接続確認 =====
+(async function checkConnection() {
+  const statusEl = document.getElementById('conn-status');
+  try {
+    const { error } = await sb.from('rtm_memos').select('id').limit(1);
+    if (error) throw error;
+    statusEl.textContent = 'Supabaseに接続しました';
+    statusEl.className = 'ok';
+  } catch (e) {
+    statusEl.textContent = 'Supabase接続エラー：設定（URL/キー/テーブル）を確認してください';
+    statusEl.className = 'err';
+    console.error('Supabase connection error:', e);
+  }
+})();
+
+// ===== ログイン（パスワードはアプリ側のみで判定。DBには認証情報を持たない） =====
+function doLogin() {
+  const pw = document.getElementById('pw-input').value;
+  const device = document.getElementById('device-input').value.trim() || 'デバイス';
+  if (!pw) {
+    document.getElementById('login-error').textContent = 'パスワードを入力してください';
+    return;
+  }
+  if (pw !== APP_PASS) {
+    document.getElementById('login-error').textContent = 'パスワードが違います';
+    return;
+  }
+  PW = pw;
+  DEVICE = device;
+  document.getElementById('login-wrap').style.display = 'none';
+  document.getElementById('app-wrap').style.display = 'flex';
+  document.getElementById('device-label').textContent = '（' + DEVICE + '）';
+  loadAndRender();
+  subscribeRealtime();
+}
+
+function doLogout() {
+  unsubscribeRealtime();
+  PW = null;
+  document.getElementById('app-wrap').style.display = 'none';
+  document.getElementById('login-wrap').style.display = 'flex';
+  document.getElementById('pw-input').value = '';
+}
+
+// ===== リアルタイム購読：他デバイスの追加・削除を即時反映 =====
+function subscribeRealtime() {
+  unsubscribeRealtime();
+  REALTIME_CHANNEL = sb
+    .channel('rtm-memos-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'rtm_memos' }, () => {
+      loadAndRender();
+    })
+    .subscribe();
+}
+
+function unsubscribeRealtime() {
+  if (REALTIME_CHANNEL) {
+    sb.removeChannel(REALTIME_CHANNEL);
+    REALTIME_CHANNEL = null;
+  }
+}
+
+// ===== メモ読み込み・表示 =====
+async function loadAndRender() {
+  if (!PW) return;
+  const { data, error } = await sb
+    .from('rtm_memos')
+    .select('*')
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    showToast('読み込みエラー: ' + error.message);
+    return;
+  }
+  renderMemos(data || []);
+}
+
+function renderMemos(memos) {
+  const feed = document.getElementById('feed');
+  feed.innerHTML = '';
+
+  if (memos.length === 0) {
+    const empty = document.createElement('div');
+    empty.id = 'empty-state';
+    empty.textContent = 'まだメモがありません。下の入力欄から最初のメモを送ってみましょう。';
+    feed.appendChild(empty);
+    return;
+  }
+
+  memos.forEach(m => {
+    feed.appendChild(buildMemoCard(m));
+  });
+  window.scrollTo(0, document.body.scrollHeight);
+}
+
+function buildMemoCard(m) {
+  const card = document.createElement('div');
+  card.className = 'memo-card';
+  card.dataset.id = m.id;
+
+  const meta = document.createElement('div');
+  meta.className = 'memo-meta';
+  const dt = document.createElement('span');
+  dt.textContent = formatDateTime(m.created_at);
+  const dev = document.createElement('span');
+  dev.className = 'memo-device';
+  dev.textContent = m.device || '';
+  meta.appendChild(dt);
+  meta.appendChild(dev);
+  card.appendChild(meta);
+
+  if (m.text) {
+    const txt = document.createElement('div');
+    txt.className = 'memo-text';
+    txt.textContent = m.text;
+    card.appendChild(txt);
+  }
+
+  if (m.file_url) {
+    const isImage = m.file_mime && m.file_mime.indexOf('image/') === 0;
+    if (isImage) {
+      const img = document.createElement('img');
+      img.className = 'memo-img';
+      img.src = m.file_url;
+      img.onclick = () => openImgModal(m.file_url);
+      card.appendChild(img);
+    } else {
+      const link = document.createElement('a');
+      link.className = 'memo-file';
+      link.href = m.file_url;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      const icon = document.createElement('span');
+      icon.className = 'ficon';
+      icon.textContent = fileIcon(m.file_name);
+      const metaWrap = document.createElement('div');
+      metaWrap.className = 'fmeta';
+      const fname = document.createElement('span');
+      fname.className = 'fname';
+      fname.textContent = m.file_name || 'ファイル';
+      const fhint = document.createElement('span');
+      fhint.className = 'fhint';
+      fhint.textContent = 'タップして開く';
+      metaWrap.appendChild(fname);
+      metaWrap.appendChild(fhint);
+      link.appendChild(icon);
+      link.appendChild(metaWrap);
+      card.appendChild(link);
+    }
+  }
+
+  const del = document.createElement('button');
+  del.className = 'memo-del';
+  del.textContent = '✕';
+  del.title = '削除';
+  del.onclick = () => deleteMemo(m.id, m.file_path);
+  card.appendChild(del);
+
+  return card;
+}
+
+function formatDateTime(raw) {
+  try {
+    const d = new Date(raw);
+    const now = new Date();
+    const sameDay = d.toDateString() === now.toDateString();
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    if (sameDay) return hh + ':' + mm;
+    return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + hh + ':' + mm;
+  } catch (e) {
+    return '';
+  }
+}
+
+function fileIcon(name) {
+  const ext = (name || '').split('.').pop().toLowerCase();
+  const map = {
+    html: '🌐', htm: '🌐',
+    gs: '📜', js: '📜', ts: '📜', json: '🗂️',
+    zip: '🗜️', rar: '🗜️', '7z': '🗜️',
+    pdf: '📕', doc: '📘', docx: '📘',
+    xls: '📗', xlsx: '📗', csv: '📗',
+    ppt: '📙', pptx: '📙',
+    txt: '📄', md: '📄'
+  };
+  return map[ext] || '📄';
+}
+
+// ===== メモ送信 =====
+async function sendMemo() {
+  if (IS_SENDING) return;
+  const input = document.getElementById('txt-input');
+  const text = input.value.trim();
+  if (!text && !PENDING_FILE) {
+    showToast('テキストかファイルを入力してください');
+    return;
+  }
+
+  IS_SENDING = true;
+  document.getElementById('btn-send').disabled = true;
+
+  try {
+    let fileUrl = '', filePath = '', fileName = '', fileMime = '';
+
+    if (PENDING_FILE) {
+      const ext = PENDING_FILE.name.includes('.') ? PENDING_FILE.name.split('.').pop() : 'bin';
+      filePath = 'memo_' + Date.now() + '_' + Math.floor(Math.random() * 1000) + '.' + ext;
+
+      const { error: uploadError } = await sb.storage
+        .from(STORAGE_BUCKET)
+        .upload(filePath, PENDING_FILE.file, { contentType: PENDING_FILE.mime });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = sb.storage.from(STORAGE_BUCKET).getPublicUrl(filePath);
+      fileUrl = urlData.publicUrl;
+      fileName = PENDING_FILE.name;
+      fileMime = PENDING_FILE.mime;
+    }
+
+    const id = 'm_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+    const { error: insertError } = await sb.from('rtm_memos').insert({
+      id: id, device: DEVICE, text: text,
+      file_url: fileUrl, file_path: filePath, file_name: fileName, file_mime: fileMime
+    });
+    if (insertError) throw insertError;
+
+    input.value = '';
+    autoGrow(input);
+    removeFile();
+    loadAndRender();
+  } catch (e) {
+    showToast('送信に失敗しました: ' + (e.message || e));
+  } finally {
+    IS_SENDING = false;
+    document.getElementById('btn-send').disabled = false;
+  }
+}
+
+// ===== ファイル選択 =====
+function onFileSelected(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (file.size > MAX_FILE_SIZE) {
+    showToast('ファイルサイズは20MB以下にしてください');
+    event.target.value = '';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    PENDING_FILE = { file: file, base64: reader.result, mime: file.type || 'application/octet-stream', name: file.name, size: file.size };
+    showFilePreview(file);
+  };
+  reader.readAsDataURL(file);
+  event.target.value = '';
+}
+
+function showFilePreview(file) {
+  const wrap = document.getElementById('file-preview-wrap');
+  const imgPrev = document.getElementById('img-preview');
+  const chip = document.getElementById('file-preview-chip');
+  wrap.style.display = 'flex';
+
+  if (file.type && file.type.indexOf('image/') === 0) {
+    imgPrev.src = PENDING_FILE.base64;
+    imgPrev.style.display = 'block';
+    chip.style.display = 'none';
+  } else {
+    imgPrev.style.display = 'none';
+    chip.style.display = 'flex';
+    chip.querySelector('.ficon').textContent = fileIcon(file.name);
+    chip.querySelector('.fname').textContent = file.name;
+  }
+}
+
+function removeFile() {
+  PENDING_FILE = null;
+  document.getElementById('file-preview-wrap').style.display = 'none';
+  document.getElementById('img-preview').src = '';
+  document.getElementById('img-preview').style.display = 'none';
+  document.getElementById('file-preview-chip').style.display = 'none';
+}
+
+// ===== メモ削除 =====
+async function deleteMemo(id, filePath) {
+  if (!confirm('このメモを削除しますか？')) return;
+  try {
+    if (filePath) {
+      await sb.storage.from(STORAGE_BUCKET).remove([filePath]);
+    }
+    const { error } = await sb.from('rtm_memos').delete().eq('id', id);
+    if (error) throw error;
+    loadAndRender();
+  } catch (e) {
+    showToast('削除に失敗しました: ' + (e.message || e));
+  }
+}
+
+// ===== 入力欄の自動高さ調整 =====
+function autoGrow(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+}
+
+document.getElementById('txt-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMemo();
+  }
+});
+
+// ===== 画像拡大表示 =====
+function openImgModal(url) {
+  document.getElementById('img-modal-img').src = url;
+  document.getElementById('img-modal').style.display = 'flex';
+}
+function closeImgModal() {
+  document.getElementById('img-modal').style.display = 'none';
+}
+</script>
+</body>
+</html>
