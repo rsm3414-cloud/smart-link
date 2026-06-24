@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>ãƒªã‚¢ãƒ«ã‚¿ã‚¤ãƒ ãƒ¡ãƒ¢å…±æœ‰ï¼ˆSupabaseç‰ˆï¼‰</title>
+<title>ƒŠƒAƒ‹ƒ^ƒCƒ€ƒƒ‚‹¤—LiSupabase”Åj</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   html, body {
@@ -14,7 +14,7 @@
   }
   * { box-sizing: border-box; }
 
-  /* ===== ãƒ­ã‚°ã‚¤ãƒ³ç”»é¢ ===== */
+  /* ===== ƒƒOƒCƒ“‰æ–Ê ===== */
   #login-wrap {
     display: flex; justify-content: center; align-items: center;
     min-height: 100vh; padding: 16px;
@@ -44,7 +44,7 @@
   #conn-status.ok { color: #3a9d5c; }
   #conn-status.err { color: #d6334c; }
 
-  /* ===== ãƒ¡ã‚¤ãƒ³ç”»é¢ ===== */
+  /* ===== ƒƒCƒ“‰æ–Ê ===== */
   #app-wrap { display: none; min-height: 100vh; flex-direction: column; }
   #hdr {
     background: #2f6fed; color: #fff; padding: 12px 16px;
@@ -107,7 +107,7 @@
     text-align: center; color: #aab1ba; font-size: 13px; padding: 60px 20px;
   }
 
-  /* ===== å…¥åŠ›ãƒãƒ¼ï¼ˆä¸‹éƒ¨å›ºå®šï¼‰ ===== */
+  /* ===== “ü—Íƒo[i‰º•”ŒÅ’èj ===== */
   #composer {
     position: fixed; bottom: 0; left: 0; right: 0;
     background: #fff; border-top: 1px solid #e4e7eb;
@@ -153,7 +153,7 @@
     border-radius: 20px; font-size: 13px; z-index: 100; display: none;
   }
 
-  /* ç”»åƒæ‹¡å¤§è¡¨ç¤ºç”¨ */
+  /* ‰æ‘œŠg‘å•\¦—p */
   #img-modal {
     display: none; position: fixed; inset: 0; background: rgba(0,0,0,.85);
     z-index: 200; align-items: center; justify-content: center; padding: 20px;
@@ -163,44 +163,44 @@
 </head>
 <body>
 
-<!-- ãƒ­ã‚°ã‚¤ãƒ³ç”»é¢ -->
+<!-- ƒƒOƒCƒ“‰æ–Ê -->
 <div id="login-wrap">
   <div id="login-box">
-    <h1>ğŸ“ ãƒªã‚¢ãƒ«ã‚¿ã‚¤ãƒ ãƒ¡ãƒ¢å…±æœ‰</h1>
-    <p>ã‚¹ãƒãƒ›ã¨PCã§åŒã˜ãƒ‘ã‚¹ãƒ¯ãƒ¼ãƒ‰ã‚’å…¥åŠ›ã—ã¦ãã ã•ã„</p>
-    <input id="pw-input" type="password" placeholder="ãƒ‘ã‚¹ãƒ¯ãƒ¼ãƒ‰" inputmode="text">
-    <input id="device-input" type="text" placeholder="ã“ã®ãƒ‡ãƒã‚¤ã‚¹ã®åå‰ï¼ˆä¾‹ï¼šã‚¹ãƒãƒ›ï¼PCï¼‰">
-    <button onclick="doLogin()">å…¥ã‚‹</button>
+    <h1>?? ƒŠƒAƒ‹ƒ^ƒCƒ€ƒƒ‚‹¤—L</h1>
+    <p>ƒXƒ}ƒz‚ÆPC‚Å“¯‚¶ƒpƒXƒ[ƒh‚ğ“ü—Í‚µ‚Ä‚­‚¾‚³‚¢</p>
+    <input id="pw-input" type="password" placeholder="ƒpƒXƒ[ƒh" inputmode="text">
+    <input id="device-input" type="text" placeholder="‚±‚ÌƒfƒoƒCƒX‚Ì–¼‘Oi—áFƒXƒ}ƒz^PCj">
+    <button onclick="doLogin()">“ü‚é</button>
     <div id="login-error"></div>
-    <div id="conn-status">Supabaseã«æ¥ç¶šä¸­...</div>
+    <div id="conn-status">Supabase‚ÉÚ‘±’†...</div>
   </div>
 </div>
 
-<!-- ãƒ¡ã‚¤ãƒ³ç”»é¢ -->
+<!-- ƒƒCƒ“‰æ–Ê -->
 <div id="app-wrap">
   <div id="hdr">
-    <span class="title">ğŸ“ ãƒ¡ãƒ¢å…±æœ‰<span id="device-label"></span></span>
-    <button onclick="doLogout()">ãƒ­ã‚°ã‚¢ã‚¦ãƒˆ</button>
+    <span class="title">?? ƒƒ‚‹¤—L<span id="device-label"></span></span>
+    <button onclick="doLogout()">ƒƒOƒAƒEƒg</button>
   </div>
 
   <div id="feed">
-    <div id="empty-state">ã¾ã ãƒ¡ãƒ¢ãŒã‚ã‚Šã¾ã›ã‚“ã€‚ä¸‹ã®å…¥åŠ›æ¬„ã‹ã‚‰æœ€åˆã®ãƒ¡ãƒ¢ã‚’é€ã£ã¦ã¿ã¾ã—ã‚‡ã†ã€‚</div>
+    <div id="empty-state">‚Ü‚¾ƒƒ‚‚ª‚ ‚è‚Ü‚¹‚ñB‰º‚Ì“ü—Í—“‚©‚çÅ‰‚Ìƒƒ‚‚ğ‘—‚Á‚Ä‚İ‚Ü‚µ‚å‚¤B</div>
   </div>
 
   <div id="composer">
     <div id="file-preview-wrap">
       <img id="img-preview" src="" style="display:none">
       <div id="file-preview-chip" style="display:none">
-        <span class="ficon">ğŸ“„</span>
+        <span class="ficon">??</span>
         <span class="fname"></span>
       </div>
-      <button id="file-preview-remove" onclick="removeFile()">å¤–ã™</button>
+      <button id="file-preview-remove" onclick="removeFile()">ŠO‚·</button>
     </div>
     <div id="composer-inner">
-      <button id="btn-file" onclick="document.getElementById('file-input').click()">ğŸ“</button>
+      <button id="btn-file" onclick="document.getElementById('file-input').click()">??</button>
       <input type="file" id="file-input" style="display:none" onchange="onFileSelected(event)">
-      <textarea id="txt-input" rows="1" placeholder="ãƒ¡ãƒ¢ã‚’å…¥åŠ›..." oninput="autoGrow(this)"></textarea>
-      <button id="btn-send" onclick="sendMemo()">â¤</button>
+      <textarea id="txt-input" rows="1" placeholder="ƒƒ‚‚ğ“ü—Í..." oninput="autoGrow(this)"></textarea>
+      <button id="btn-send" onclick="sendMemo()">?</button>
     </div>
   </div>
 </div>
@@ -213,13 +213,13 @@
 
 <script>
 // ============================================================
-// Supabaseæ¥ç¶šè¨­å®š
-// â€» ãƒ‡ãƒ—ãƒ­ã‚¤å‰ã«ä»¥ä¸‹2ã¤ã‚’å®Ÿéš›ã®å€¤ã«æ›¸ãæ›ãˆã¦ãã ã•ã„
-//   å–å¾—å ´æ‰€: Supabaseç®¡ç†ç”»é¢ â†’ Settings â†’ API
+// SupabaseÚ‘±İ’è
+// ¦ ƒfƒvƒƒC‘O‚ÉˆÈ‰º2‚Â‚ğÀÛ‚Ì’l‚É‘‚«Š·‚¦‚Ä‚­‚¾‚³‚¢
+//   æ“¾êŠ: SupabaseŠÇ—‰æ–Ê ¨ Settings ¨ API
 // ============================================================
 const SUPABASE_URL = 'https://tmisyqsnxmjunfuqapg.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRtaXN5c3FzbnhtanVuZnVxYXBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDYzODMsImV4cCI6MjA5NTYyMjM4M30.VhhvVXJyfbooo_VIudqV_mCEC0FctjV9_6r-925eP9Q';
-const APP_PASS = 'memo2026'; // ç°¡æ˜“ãƒ‘ã‚¹ãƒ¯ãƒ¼ãƒ‰ï¼ˆå¿…è¦ã«å¿œã˜ã¦å¤‰æ›´ï¼‰
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRtaXN5c3FzbnhtanVuZnVxYXBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDYzODMsImV4cCI6MjA5NTYyMjM4M30.VhhvVXJyfbooo_VIudqV_mCEC0FctjV9_6r-925eP9Q'; // © SupabaseŠÇ—‰æ–Ê‚Ì anon public ƒL[‚É‘‚«Š·‚¦‚Ä‚­‚¾‚³‚¢
+const APP_PASS = 'memo2026'; // ŠÈˆÕƒpƒXƒ[ƒhi•K—v‚É‰‚¶‚Ä•ÏXj
 const STORAGE_BUCKET = 'rtm-attachments';
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 
@@ -239,38 +239,38 @@ function showToast(msg) {
   setTimeout(() => { t.style.display = 'none'; }, 2200);
 }
 
-// ===== èµ·å‹•æ™‚ï¼šSupabaseæ¥ç¶šç¢ºèª =====
+// ===== ‹N“®FSupabaseÚ‘±Šm”F =====
 (async function checkConnection() {
   const statusEl = document.getElementById('conn-status');
   try {
     const { error } = await sb.from('rtm_memos').select('id').limit(1);
     if (error) throw error;
-    statusEl.textContent = 'Supabaseã«æ¥ç¶šã—ã¾ã—ãŸ';
+    statusEl.textContent = 'Supabase‚ÉÚ‘±‚µ‚Ü‚µ‚½';
     statusEl.className = 'ok';
   } catch (e) {
-    statusEl.textContent = 'Supabaseæ¥ç¶šã‚¨ãƒ©ãƒ¼ï¼šè¨­å®šï¼ˆURL/ã‚­ãƒ¼/ãƒ†ãƒ¼ãƒ–ãƒ«ï¼‰ã‚’ç¢ºèªã—ã¦ãã ã•ã„';
+    statusEl.textContent = 'SupabaseÚ‘±ƒGƒ‰[Fİ’èiURL/ƒL[/ƒe[ƒuƒ‹j‚ğŠm”F‚µ‚Ä‚­‚¾‚³‚¢';
     statusEl.className = 'err';
     console.error('Supabase connection error:', e);
   }
 })();
 
-// ===== ãƒ­ã‚°ã‚¤ãƒ³ï¼ˆãƒ‘ã‚¹ãƒ¯ãƒ¼ãƒ‰ã¯ã‚¢ãƒ—ãƒªå´ã®ã¿ã§åˆ¤å®šã€‚DBã«ã¯èªè¨¼æƒ…å ±ã‚’æŒãŸãªã„ï¼‰ =====
+// ===== ƒƒOƒCƒ“iƒpƒXƒ[ƒh‚ÍƒAƒvƒŠ‘¤‚Ì‚İ‚Å”»’èBDB‚É‚Í”FØî•ñ‚ğ‚½‚È‚¢j =====
 function doLogin() {
   const pw = document.getElementById('pw-input').value;
-  const device = document.getElementById('device-input').value.trim() || 'ãƒ‡ãƒã‚¤ã‚¹';
+  const device = document.getElementById('device-input').value.trim() || 'ƒfƒoƒCƒX';
   if (!pw) {
-    document.getElementById('login-error').textContent = 'ãƒ‘ã‚¹ãƒ¯ãƒ¼ãƒ‰ã‚’å…¥åŠ›ã—ã¦ãã ã•ã„';
+    document.getElementById('login-error').textContent = 'ƒpƒXƒ[ƒh‚ğ“ü—Í‚µ‚Ä‚­‚¾‚³‚¢';
     return;
   }
   if (pw !== APP_PASS) {
-    document.getElementById('login-error').textContent = 'ãƒ‘ã‚¹ãƒ¯ãƒ¼ãƒ‰ãŒé•ã„ã¾ã™';
+    document.getElementById('login-error').textContent = 'ƒpƒXƒ[ƒh‚ªˆá‚¢‚Ü‚·';
     return;
   }
   PW = pw;
   DEVICE = device;
   document.getElementById('login-wrap').style.display = 'none';
   document.getElementById('app-wrap').style.display = 'flex';
-  document.getElementById('device-label').textContent = 'ï¼ˆ' + DEVICE + 'ï¼‰';
+  document.getElementById('device-label').textContent = 'i' + DEVICE + 'j';
   loadAndRender();
   subscribeRealtime();
 }
@@ -283,7 +283,7 @@ function doLogout() {
   document.getElementById('pw-input').value = '';
 }
 
-// ===== ãƒªã‚¢ãƒ«ã‚¿ã‚¤ãƒ è³¼èª­ï¼šä»–ãƒ‡ãƒã‚¤ã‚¹ã®è¿½åŠ ãƒ»å‰Šé™¤ã‚’å³æ™‚åæ˜  =====
+// ===== ƒŠƒAƒ‹ƒ^ƒCƒ€w“ÇF‘¼ƒfƒoƒCƒX‚Ì’Ç‰ÁEíœ‚ğ‘¦”½‰f =====
 function subscribeRealtime() {
   unsubscribeRealtime();
   REALTIME_CHANNEL = sb
@@ -301,7 +301,7 @@ function unsubscribeRealtime() {
   }
 }
 
-// ===== ãƒ¡ãƒ¢èª­ã¿è¾¼ã¿ãƒ»è¡¨ç¤º =====
+// ===== ƒƒ‚“Ç‚İ‚İE•\¦ =====
 async function loadAndRender() {
   if (!PW) return;
   const { data, error } = await sb
@@ -310,7 +310,7 @@ async function loadAndRender() {
     .order('created_at', { ascending: true });
 
   if (error) {
-    showToast('èª­ã¿è¾¼ã¿ã‚¨ãƒ©ãƒ¼: ' + error.message);
+    showToast('“Ç‚İ‚İƒGƒ‰[: ' + error.message);
     return;
   }
   renderMemos(data || []);
@@ -323,7 +323,7 @@ function renderMemos(memos) {
   if (memos.length === 0) {
     const empty = document.createElement('div');
     empty.id = 'empty-state';
-    empty.textContent = 'ã¾ã ãƒ¡ãƒ¢ãŒã‚ã‚Šã¾ã›ã‚“ã€‚ä¸‹ã®å…¥åŠ›æ¬„ã‹ã‚‰æœ€åˆã®ãƒ¡ãƒ¢ã‚’é€ã£ã¦ã¿ã¾ã—ã‚‡ã†ã€‚';
+    empty.textContent = '‚Ü‚¾ƒƒ‚‚ª‚ ‚è‚Ü‚¹‚ñB‰º‚Ì“ü—Í—“‚©‚çÅ‰‚Ìƒƒ‚‚ğ‘—‚Á‚Ä‚İ‚Ü‚µ‚å‚¤B';
     feed.appendChild(empty);
     return;
   }
@@ -378,10 +378,10 @@ function buildMemoCard(m) {
       metaWrap.className = 'fmeta';
       const fname = document.createElement('span');
       fname.className = 'fname';
-      fname.textContent = m.file_name || 'ãƒ•ã‚¡ã‚¤ãƒ«';
+      fname.textContent = m.file_name || 'ƒtƒ@ƒCƒ‹';
       const fhint = document.createElement('span');
       fhint.className = 'fhint';
-      fhint.textContent = 'ã‚¿ãƒƒãƒ—ã—ã¦é–‹ã';
+      fhint.textContent = 'ƒ^ƒbƒv‚µ‚ÄŠJ‚­';
       metaWrap.appendChild(fname);
       metaWrap.appendChild(fhint);
       link.appendChild(icon);
@@ -392,8 +392,8 @@ function buildMemoCard(m) {
 
   const del = document.createElement('button');
   del.className = 'memo-del';
-  del.textContent = 'âœ•';
-  del.title = 'å‰Šé™¤';
+  del.textContent = '?';
+  del.title = 'íœ';
   del.onclick = () => deleteMemo(m.id, m.file_path);
   card.appendChild(del);
 
@@ -417,24 +417,24 @@ function formatDateTime(raw) {
 function fileIcon(name) {
   const ext = (name || '').split('.').pop().toLowerCase();
   const map = {
-    html: 'ğŸŒ', htm: 'ğŸŒ',
-    gs: 'ğŸ“œ', js: 'ğŸ“œ', ts: 'ğŸ“œ', json: 'ğŸ—‚ï¸',
-    zip: 'ğŸ—œï¸', rar: 'ğŸ—œï¸', '7z': 'ğŸ—œï¸',
-    pdf: 'ğŸ“•', doc: 'ğŸ“˜', docx: 'ğŸ“˜',
-    xls: 'ğŸ“—', xlsx: 'ğŸ“—', csv: 'ğŸ“—',
-    ppt: 'ğŸ“™', pptx: 'ğŸ“™',
-    txt: 'ğŸ“„', md: 'ğŸ“„'
+    html: '??', htm: '??',
+    gs: '??', js: '??', ts: '??', json: '???',
+    zip: '???', rar: '???', '7z': '???',
+    pdf: '??', doc: '??', docx: '??',
+    xls: '??', xlsx: '??', csv: '??',
+    ppt: '??', pptx: '??',
+    txt: '??', md: '??'
   };
-  return map[ext] || 'ğŸ“„';
+  return map[ext] || '??';
 }
 
-// ===== ãƒ¡ãƒ¢é€ä¿¡ =====
+// ===== ƒƒ‚‘—M =====
 async function sendMemo() {
   if (IS_SENDING) return;
   const input = document.getElementById('txt-input');
   const text = input.value.trim();
   if (!text && !PENDING_FILE) {
-    showToast('ãƒ†ã‚­ã‚¹ãƒˆã‹ãƒ•ã‚¡ã‚¤ãƒ«ã‚’å…¥åŠ›ã—ã¦ãã ã•ã„');
+    showToast('ƒeƒLƒXƒg‚©ƒtƒ@ƒCƒ‹‚ğ“ü—Í‚µ‚Ä‚­‚¾‚³‚¢');
     return;
   }
 
@@ -472,19 +472,19 @@ async function sendMemo() {
     removeFile();
     loadAndRender();
   } catch (e) {
-    showToast('é€ä¿¡ã«å¤±æ•—ã—ã¾ã—ãŸ: ' + (e.message || e));
+    showToast('‘—M‚É¸”s‚µ‚Ü‚µ‚½: ' + (e.message || e));
   } finally {
     IS_SENDING = false;
     document.getElementById('btn-send').disabled = false;
   }
 }
 
-// ===== ãƒ•ã‚¡ã‚¤ãƒ«é¸æŠ =====
+// ===== ƒtƒ@ƒCƒ‹‘I‘ğ =====
 function onFileSelected(event) {
   const file = event.target.files[0];
   if (!file) return;
   if (file.size > MAX_FILE_SIZE) {
-    showToast('ãƒ•ã‚¡ã‚¤ãƒ«ã‚µã‚¤ã‚ºã¯20MBä»¥ä¸‹ã«ã—ã¦ãã ã•ã„');
+    showToast('ƒtƒ@ƒCƒ‹ƒTƒCƒY‚Í20MBˆÈ‰º‚É‚µ‚Ä‚­‚¾‚³‚¢');
     event.target.value = '';
     return;
   }
@@ -523,9 +523,9 @@ function removeFile() {
   document.getElementById('file-preview-chip').style.display = 'none';
 }
 
-// ===== ãƒ¡ãƒ¢å‰Šé™¤ =====
+// ===== ƒƒ‚íœ =====
 async function deleteMemo(id, filePath) {
-  if (!confirm('ã“ã®ãƒ¡ãƒ¢ã‚’å‰Šé™¤ã—ã¾ã™ã‹ï¼Ÿ')) return;
+  if (!confirm('‚±‚Ìƒƒ‚‚ğíœ‚µ‚Ü‚·‚©H')) return;
   try {
     if (filePath) {
       await sb.storage.from(STORAGE_BUCKET).remove([filePath]);
@@ -534,11 +534,11 @@ async function deleteMemo(id, filePath) {
     if (error) throw error;
     loadAndRender();
   } catch (e) {
-    showToast('å‰Šé™¤ã«å¤±æ•—ã—ã¾ã—ãŸ: ' + (e.message || e));
+    showToast('íœ‚É¸”s‚µ‚Ü‚µ‚½: ' + (e.message || e));
   }
 }
 
-// ===== å…¥åŠ›æ¬„ã®è‡ªå‹•é«˜ã•èª¿æ•´ =====
+// ===== “ü—Í—“‚Ì©“®‚‚³’²® =====
 function autoGrow(el) {
   el.style.height = 'auto';
   el.style.height = Math.min(el.scrollHeight, 100) + 'px';
@@ -551,7 +551,7 @@ document.getElementById('txt-input').addEventListener('keydown', function(e) {
   }
 });
 
-// ===== ç”»åƒæ‹¡å¤§è¡¨ç¤º =====
+// ===== ‰æ‘œŠg‘å•\¦ =====
 function openImgModal(url) {
   document.getElementById('img-modal-img').src = url;
   document.getElementById('img-modal').style.display = 'flex';
